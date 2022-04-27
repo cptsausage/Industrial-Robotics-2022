@@ -1,17 +1,21 @@
 classdef UR3 < handle
-    %UNTITLED Summary of this class goes here
-    %   Detailed explanation goes here
+    %UR3 UR3 model class
+    %   Contains main properties and methods shared between LaserBot and
+    %   TargetBot
 
     properties
         
+        % Using model property for UR3 serial links
         model;
 
+        % Designated UR3 workspace for initial plot
         workspace = [-3 3 -3 3 -0.3 2];  
 
     end
 
     methods
         function self = UR3()
+            % UR3 - Main constructor initialising UR3 object
             
             self.GetUR3Robot();
 
@@ -20,6 +24,8 @@ classdef UR3 < handle
         end
 
         function GetUR3Robot(self)
+            %GetUR3Robot - Creates UR3 bot using SerialLink with D&H
+            %parameters
             
             % D&H parameters from universal robotics website: https://www.universal-robots.com/articles/ur/application-installation/dh-parameters-for-calculations-of-kinematics-and-dynamics/
             % Joint limits found in UR3 user manual: https://s3-eu-west-1.amazonaws.com/ur-support-site/32341/UR3_User_Manual_en_E67ON_Global-3.5.5.pdf
@@ -44,6 +50,7 @@ classdef UR3 < handle
         end
 
         function PlotUR3(self)
+            % PlotUR3 - Plots the UR3 robot with model
 
             for linkIndex = 0:self.model.n
                 
@@ -75,8 +82,19 @@ classdef UR3 < handle
             end
         end
 
-        % Used to ensure model is using correct D&H parameters
+        function MoveBot(self, pose)
+            % MoveBot - Main function for moving the robot
+
+            % Need to fill out steps for moving robot:
+            % What method do we want to use? RMRC or joint step
+            % interpolation?
+            % Collision Checking?
+            % Getting the error from desired pose?
+            % Should this be separated into different functions?
+        end
+
         function ValidateModel(self)
+            % ValidateModel - Used to ensure model is using correct D&H parameters
             load ur3_q.mat q
 
             for step = 1:10:size(q,1)
@@ -84,5 +102,7 @@ classdef UR3 < handle
                 pause(0.01);
             end
         end
+
+
     end
 end
