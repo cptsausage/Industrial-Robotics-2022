@@ -13,6 +13,8 @@ classdef RoboTargeterSimulation
         workspace;
         laserBotBase;
         targetBotBase;
+        targetsHit = 0;
+        time; % seconds
 
     end
 
@@ -24,10 +26,14 @@ classdef RoboTargeterSimulation
             self.targetBot = TargetBot();
         end
 
-        function outputArg = method1(obj,inputArg)
-            %METHOD1 Summary of this method goes here
-            %   Detailed explanation goes here
-            outputArg = obj.Property1 + inputArg;
+        function InitialiseSimulation(self)
+            %InitialiseSimulation - Move bots to base positions and begin
+            %timer
+        end
+
+        function CalculateError(self)
+            %CalculateError - Calculate error/accuracy between target and
+            %laser (using line-plane intersection and target center)
         end
     end
 end
