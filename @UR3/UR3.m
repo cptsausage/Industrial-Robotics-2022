@@ -93,6 +93,18 @@ classdef UR3 < handle
             % Should this be separated into different functions?
         end
 
+        function NearSingularityM = CheckSingularity(self,q)
+            % NearSingularityM - Checks if the robot is close to a
+            % singularity
+            J = self.model.jacob(q);
+            m = sqrt(det(J*J))
+            if(m > 0.1)
+                NearSingularityM = 1;
+            else
+                NearSingularityM = 0;
+            end
+        end
+
         function ValidateModel(self)
             % ValidateModel - Used to ensure model is using correct D&H parameters
             load ur3_q.mat q
