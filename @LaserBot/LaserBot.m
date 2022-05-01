@@ -5,10 +5,6 @@ classdef LaserBot < UR3
 
     properties
         
-        % Camera Parameters
-        cameraModel = 'Camera Model Here';
-        cameraOffset = zeros(4,4); % camera offset from end-effector
-        
         % Laser Parameters
         laserModel = 'Laser Model Here';
         laserRange = 3; %Placeholder (metres)

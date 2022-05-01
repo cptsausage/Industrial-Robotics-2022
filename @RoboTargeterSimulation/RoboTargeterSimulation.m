@@ -23,7 +23,8 @@ classdef RoboTargeterSimulation
             %RoboTargeterSimulation Initialisation of class object
             %   Creation of LaserBot and TargetBot objects
             self.laserBot = LaserBot();
-            self.targetBot = TargetBot();
+
+%             self.targetBot = TargetBot();
         end
 
         function InitialiseSimulation(self)

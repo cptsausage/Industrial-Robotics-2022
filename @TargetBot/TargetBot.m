@@ -8,8 +8,6 @@ classdef TargetBot < UR3
         % Notes: do we nee a camera? Or should we just make a gui to move
         % it manually / set movement?
         % Camera Parameters
-        cameraModel = 'Camera Model Here';
-        cameraOffset = zeros(4,4); %Camera offset from end effector
         
         % Target Parameters
         targetSize = 0.1; %Placeholder (metres)

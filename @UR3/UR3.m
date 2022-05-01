@@ -14,6 +14,14 @@ classdef UR3 < handle
         % Default starting position for UR3
         defaultPosition = deg2rad([0,-90,45,-45,-90,0]);
 
+        % Nice starting pose before performing RMRC in cartesian plane
+        startT = transl(0.4,0,0.5)*troty(pi/2);
+
+        % Camera Parameters
+        cameraOn = false;
+        cameraModel;
+        cameraOffset = transl(0.03,0,0); % camera offset from end-effector
+
         % Boolean to run analysis of RMRC
         analysis = false;
 
@@ -30,8 +38,12 @@ classdef UR3 < handle
 
             self.PlotUR3();             % Plot UR3 in workspace with model mesh
 
-            % Move UR3 to default position
-            self.MoveJoints(self.defaultPosition);
+            if self.cameraOn == true
+                self.GetCamera();
+            end
+
+            % Move UR3 to start position
+            self.MoveJoints(self.startT);
 
         end
 
@@ -72,7 +84,7 @@ classdef UR3 < handle
             end
         
             % Display robot
-            self.model.plot3d(zeros(1,self.model.n),'noarrow','workspace',self.workspace);
+            self.model.plot3d(zeros(1,self.model.n),'arrow','workspace',self.workspace);
             if isempty(findobj(get(gca,'Children'),'Type','Light'))
                 camlight
             end  
@@ -96,14 +108,45 @@ classdef UR3 < handle
             hold on
         end
 
-        function MoveJoints (self, q)
-            % MoveJoints - For joint interpolation to known orientations (default poses)
+        function GetCamera(self)
+            % If camera setting is on, create and plot camera object onto
+            % model
+
+            % CHANGE ONCE USB CAM SPECS ARE FOUND
+            self.cameraModel = CentralCamera(...
+                'focal', 0.008,...
+                'pixel', 10e-6,...
+                'resolution', 1024,...
+                'sensor', [0.01;0.01],...
+                'pose', self.model.fkine(self.model.getpos)*self.cameraOffset);
+
+            self.cameraModel.plot_camera();
+
+        end
+
+        function MoveJoints (self, desiredPose)
+            % MoveJoints - For joint interpolation movement
+            
+            q = self.model.ikcon(desiredPose,self.model.getpos());        % Solve joint angles using inverse kinematics
             
             time = 3;
             steps = 3/self.deltaT;
             qMatrix = jtraj(self.model.getpos(),q,steps);
             for i = 1:steps
+                for j = 1:self.model.n                                                             % Loop through joints 1 to 6
+                    if qMatrix(i,j) < self.model.qlim(j,1)                     % If next joint angle is lower than joint limit...
+                        display(['Reaching joint ' num2str(j) ' limit, stopping...'])
+                        return
+                    elseif qMatrix(i,j) > self.model.qlim(j,2)                 % If next joint angle is greater than joint limit ...
+                        display(['Reaching joint ' num2str(j) ' limit, stopping...'])
+                        return
+                    end
+                end
                 self.model.animate(qMatrix(i,:));
+                if self.cameraOn == true
+                    self.cameraModel.T = self.model.fkine(self.model.getpos())*self.cameraOffset; % Update camera position
+                    self.cameraModel.plot_camera();
+                end
                 pause(self.deltaT);
             end
         end
