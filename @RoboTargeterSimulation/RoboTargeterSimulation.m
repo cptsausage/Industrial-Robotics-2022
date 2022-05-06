@@ -24,12 +24,30 @@ classdef RoboTargeterSimulation
             %   Creation of LaserBot and TargetBot objects
             self.laserBot = LaserBot();
 
-%             self.targetBot = TargetBot();
+            self.targetBot = TargetBot();
         end
 
         function InitialiseSimulation(self)
             %InitialiseSimulation - Move bots to base positions and begin
             %timer
+        end
+
+        function RandomTargetPractice(self)
+            % RandomTargetPractice - Uses bot functions to randomly
+            % generate floating targets for the laser bot to find and
+            % target
+            
+            self.targetBot.SetRandomTarget();
+
+            % For simulation, give target positions to laserbot for
+            % 'GetImage' function
+            self.laserBot.targetPlots = self.targetBot.targetCorners;
+
+            self.laserBot.SetCamera();
+
+            self.laserBot.FindTarget();
+
+
         end
 
         function CalculateError(self)

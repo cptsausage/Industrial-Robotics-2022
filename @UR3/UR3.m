@@ -5,6 +5,8 @@ classdef UR3 < handle
 
     properties
         
+        name = 'UR3';
+        
         % Using model property for UR3 serial links
         model;
 
@@ -18,15 +20,19 @@ classdef UR3 < handle
         startT = transl(0.4,0,0.5)*troty(pi/2);
 
         % Camera Parameters
-        cameraOn = false;
-        cameraModel;
-        cameraOffset = transl(0.03,0,0); % camera offset from end-effector
+        cameraOn = true;
+        % CHANGE ONCE USB CAM SPECS ARE FOUND
+        cameraModel = CentralCamera(...
+                'focal', 0.08,...
+                'pixel', 10e-5,...
+                'resolution', [1024 1024],...
+                'centre', [512 512], ...
+                'name', 'LaserCamera');
+        cameraOffset = transl(0,0,0); % camera offset from end-effector
+        cameraFps = 25; 
 
         % Boolean to run analysis of RMRC
         analysis = false;
-
-        % deltaT for frequency of robot communication and movement
-        deltaT = 0.02;
 
     end
 
@@ -38,12 +44,9 @@ classdef UR3 < handle
 
             self.PlotUR3();             % Plot UR3 in workspace with model mesh
 
-            if self.cameraOn == true
-                self.GetCamera();
-            end
+            self.PlotCamera();
 
-            % Move UR3 to start position
-            self.MoveJoints(self.startT);
+            drawnow
 
         end
 
@@ -69,7 +72,7 @@ classdef UR3 < handle
             L(5).qlim = [-360 360]*pi/180;
             L(6).qlim = [-360 360]*pi/180;
 
-            self.model = SerialLink(L,'name','UR3');
+            self.model = SerialLink(L,'name',self.name);
 
         end
 
@@ -108,29 +111,23 @@ classdef UR3 < handle
             hold on
         end
 
-        function GetCamera(self)
+        function PlotCamera(self)
             % If camera setting is on, create and plot camera object onto
             % model
-
-            % CHANGE ONCE USB CAM SPECS ARE FOUND
-            self.cameraModel = CentralCamera(...
-                'focal', 0.008,...
-                'pixel', 10e-6,...
-                'resolution', 1024,...
-                'sensor', [0.01;0.01],...
-                'pose', self.model.fkine(self.model.getpos)*self.cameraOffset);
-
-            self.cameraModel.plot_camera();
+            if self.cameraOn
+                Tc0 = self.model.fkine(self.model.getpos)*self.cameraOffset;
+                self.cameraModel.T = Tc0;
+                self.cameraModel.plot_camera('Tcam',Tc0,'scale',0.15);
+            end
 
         end
 
-        function MoveJoints (self, desiredPose)
+        function MoveJoints (self, q)
             % MoveJoints - For joint interpolation movement
             
-            q = self.model.ikcon(desiredPose,self.model.getpos());        % Solve joint angles using inverse kinematics
-            
             time = 3;
-            steps = 3/self.deltaT;
+            deltaT = 1/self.cameraFps;
+            steps = 100;
             qMatrix = jtraj(self.model.getpos(),q,steps);
             for i = 1:steps
                 for j = 1:self.model.n                                                             % Loop through joints 1 to 6
@@ -147,7 +144,7 @@ classdef UR3 < handle
                     self.cameraModel.T = self.model.fkine(self.model.getpos())*self.cameraOffset; % Update camera position
                     self.cameraModel.plot_camera();
                 end
-                pause(self.deltaT);
+                pause(deltaT);
             end
         end
 
@@ -156,7 +153,8 @@ classdef UR3 < handle
 
             % RMRC PARAMETERS
             t = 5;              % Allcoated time (s) for movement, need to make dynamic for small/large movements
-            steps = t/self.deltaT;   % No. of steps for simulation
+            deltaT = 1/self.cameraFps;
+            steps = t/deltaT;   % No. of steps for simulation
             delta = 2*pi/steps; % Small angle change
             epsilon = 0.1;      % Threshold for DLS optimisation
             W = diag([1 1 1 0.1 0.1 0.1]);    % Velocity vector weighting matrix
@@ -189,6 +187,7 @@ classdef UR3 < handle
                 theta(2,i) = startTheta(1) + s(i)*((endTheta(1)-startTheta(1)));     % Pitch angle
                 theta(3,i) = startTheta(1) + s(i)*((endTheta(1)-startTheta(1)));     % Yaw angle
             end
+            hold on
             traj_h = plot3(x(1,:),x(2,:),x(3,:),'k.','LineWidth',1);
 
             % Use RMRC to move the robot along the trajectory
@@ -197,9 +196,9 @@ classdef UR3 < handle
                 deltaX = x(:,i+1) - T(1:3,4);                                         	% Get position error from next waypoint
                 Rd = rpy2r(theta(1,i+1),theta(2,i+1),theta(3,i+1));                     % Get next RPY angles, convert to rotation matrix
                 Ra = T(1:3,1:3);                                                        % Current end-effector rotation matrix
-                Rdot = (1/self.deltaT)*(Rd - Ra);                                                % Calculate rotation matrix error
+                Rdot = (1/deltaT)*(Rd - Ra);                                                % Calculate rotation matrix error
                 S = Rdot*Ra';                                                           % Skew symmetric!
-                linear_velocity = (1/self.deltaT)*deltaX;
+                linear_velocity = (1/deltaT)*deltaX;
                 angular_velocity = [S(3,2);S(1,3);S(2,1)];                              % Check the structure of Skew Symmetric matrix!!
                 deltaTheta = tr2rpy(Rd*Ra');                                            % Convert rotation matrix to RPY angles
                 xdot = W*[linear_velocity;angular_velocity];                          	% Calculate end-effector velocity to reach next waypoint.
@@ -213,22 +212,23 @@ classdef UR3 < handle
                 invJ = inv(J'*J + lambda *eye(6))*J';                                   % DLS Inverse
                 qdot(i,:) = (invJ*xdot)';                                                % Solve the RMRC equation (you may need to transpose the         vector)
                 for j = 1:self.model.n                                                             % Loop through joints 1 to 6
-                    if qMatrix(i,j) + self.deltaT*qdot(i,j) < self.model.qlim(j,1)                     % If next joint angle is lower than joint limit...
+                    if qMatrix(i,j) + deltaT*qdot(i,j) < self.model.qlim(j,1)                     % If next joint angle is lower than joint limit...
                         qdot(i,j) = 0; % Stop the motor
                         display(['Reaching joint ' num2str(j) ' limit'])
-                    elseif qMatrix(i,j) + self.deltaT*qdot(i,j) > self.model.qlim(j,2)                 % If next joint angle is greater than joint limit ...
+                    elseif qMatrix(i,j) + deltaT*qdot(i,j) > self.model.qlim(j,2)                 % If next joint angle is greater than joint limit ...
                         qdot(i,j) = 0; % Stop the motor
                         display(['Reaching joint ' num2str(j) ' limit'])
                     end
                 end
-                qMatrix(i+1,:) = qMatrix(i,:) + self.deltaT*qdot(i,:);                         	% Update next joint state based on joint velocities
+                qMatrix(i+1,:) = qMatrix(i,:) + deltaT*qdot(i,:);                         	% Update next joint state based on joint velocities
                 truePos(:,i) = T(1:3,4);
                 positionError(:,i) = x(:,i+1) - T(1:3,4);                               % For plotting
                 angleError(:,i) = deltaTheta;                                           % For plotting
 
                 self.model.animate(qMatrix(i,:));
+                self.PlotCamera;
                 path_h = plot3(truePos(1,:),truePos(2,:),truePos(3,:),'r.','LineWidth',1);
-                pause(self.deltaT);
+                pause(deltaT);
             end
 
             display(['Final position error: ', num2str(positionError(:,steps-1)')])
