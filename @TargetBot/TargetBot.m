@@ -30,6 +30,8 @@ classdef TargetBot < UR3
 
             self@UR3();
             self.name = 'TargetBot';
+            self.model.base = transl(2,0,0)*trotz(pi);
+            self.MoveJoints(self.defaultPosition);
         end
 
         function MoveTarget(self)
@@ -49,11 +51,11 @@ classdef TargetBot < UR3
             % SetTarget - Random Target setting for simulation
             xRange = [1.3 1.5];
             yRange = [-0.3 0.3];
-            zRange = [0.2 0.4];
+            zRange = [0.2 0.6];
             x = xRange(1) + (xRange(2)-xRange(1))*rand(1,1);
             y = yRange(1) + (yRange(2)-yRange(1))*rand(1,1);
             z = zRange(1) + (zRange(2)-zRange(1))*rand(1,1);
-            self.targetCorners = mkgrid(2, 0.5, 'T', transl(x,y,z)*troty(pi/2));
+            self.targetCorners = mkgrid(2, 0.2, 'T', transl(x,y,z)*troty(pi/2));
             self.PlotTarget;
         end
 

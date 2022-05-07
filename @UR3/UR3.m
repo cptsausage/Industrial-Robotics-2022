@@ -11,23 +11,23 @@ classdef UR3 < handle
         model;
 
         % Designated UR3 workspace for initial plot
-        workspace = [-1 1 -1 1 -0.3 1];
+        workspace = [-2.5 2.5 -2.5 2.5 -0.3 1];
 
         % Default starting position for UR3
-        defaultPosition = deg2rad([0,-90,45,-45,-90,0]);
+        defaultPosition = deg2rad([-90,-45,-90,-45,0,90]);
 
         % Nice starting pose before performing RMRC in cartesian plane
         startT = transl(0.4,0,0.5)*troty(pi/2);
 
         % Camera Parameters
-        cameraOn = true;
+        cameraOn = false;
         % CHANGE ONCE USB CAM SPECS ARE FOUND
         cameraModel = CentralCamera(...
                 'focal', 0.08,...
                 'pixel', 10e-5,...
                 'resolution', [1024 1024],...
                 'centre', [512 512], ...
-                'name', 'LaserCamera');
+                'name', 'Camera');
         cameraOffset = transl(0,0,0); % camera offset from end-effector
         cameraFps = 25; 
 
@@ -41,10 +41,8 @@ classdef UR3 < handle
             % UR3 - Main constructor initialising UR3 object
             
             self.GetUR3Robot();         % Create UR3 SerialLink model
-
+            
             self.PlotUR3();             % Plot UR3 in workspace with model mesh
-
-            self.PlotCamera();
 
             drawnow
 
@@ -54,6 +52,10 @@ classdef UR3 < handle
             %GetUR3Robot - Creates UR3 bot using SerialLink with D&H
             %parameters
             
+            pause(0.001);
+            self.name = ['UR_3_',datestr(now,'yyyymmddTHHMMSSFFF')];
+
+
             % D&H parameters from universal robotics website: https://www.universal-robots.com/articles/ur/application-installation/dh-parameters-for-calculations-of-kinematics-and-dynamics/
             % Joint limits found in UR3 user manual: https://s3-eu-west-1.amazonaws.com/ur-support-site/32341/UR3_User_Manual_en_E67ON_Global-3.5.5.pdf
 
@@ -87,7 +89,7 @@ classdef UR3 < handle
             end
         
             % Display robot
-            self.model.plot3d(zeros(1,self.model.n),'arrow','workspace',self.workspace);
+            self.model.plot3d(zeros(1,self.model.n),'noarrow','workspace',self.workspace);
             if isempty(findobj(get(gca,'Children'),'Type','Light'))
                 camlight
             end  
@@ -107,8 +109,6 @@ classdef UR3 < handle
                     continue;
                 end
             end
-
-            hold on
         end
 
         function PlotCamera(self)
@@ -117,7 +117,7 @@ classdef UR3 < handle
             if self.cameraOn
                 Tc0 = self.model.fkine(self.model.getpos)*self.cameraOffset;
                 self.cameraModel.T = Tc0;
-                self.cameraModel.plot_camera('Tcam',Tc0,'scale',0.15);
+                self.cameraModel.plot_camera('Tcam',Tc0,'scale',0.05);
             end
 
         end
