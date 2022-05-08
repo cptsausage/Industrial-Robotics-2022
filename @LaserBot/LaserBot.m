@@ -111,6 +111,21 @@ classdef LaserBot < UR3
         function CheckIfHit(self)
             % CheckIfHit - Determine if target has been hit
         end
-
+        function laserObject = ReturnLaser(self)
+        %%Incomplete - Laser bot function that returns a laser object which
+        %%can be used in robottargetsimulation for target bot with plane
+        %%intersection to determine if there is a hit
+            endEffectorTr = self.model.tool()
+            [X,Y,Z] = cylinder([0,0.1],6);
+            Z = Z * 10;
+            updatedConePoints = [endEffectorTr * [X(:),Y(:),Z(:),ones(numel(X),1)]']';
+            conePointsSize = size(X);
+            cone_h = surf(reshape(updatedConePoints(:,1),conePointsSize) ...
+             ,reshape(updatedConePoints(:,2),conePointsSize) ...
+             ,reshape(updatedConePoints(:,3),conePointsSize));
+            coneEnds = [cone_h.XData(2,:)', cone_h.YData(2,:)', cone_h.ZData(2,:)'];
+            laserObject = endEffectorTr
+            drawnow();
+        end    
     end
 end

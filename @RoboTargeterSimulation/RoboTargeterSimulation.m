@@ -8,7 +8,7 @@ classdef RoboTargeterSimulation
         % Properties holding target and laser robots
         laserBot;
         targetBot;
-
+        laser;
         % Simulated workspace size and parameters
         workspace;
         laserBotBase;
@@ -23,7 +23,6 @@ classdef RoboTargeterSimulation
             %RoboTargeterSimulation Initialisation of class object
             %   Creation of LaserBot and TargetBot objects
             self.laserBot = LaserBot();
-
             self.targetBot = TargetBot();
         end
 
@@ -38,6 +37,7 @@ classdef RoboTargeterSimulation
             % target
             
             self.targetBot.SetRandomTarget();
+            
 
             % For simulation, give target positions to laserbot for
             % 'GetImage' function
