@@ -31,6 +31,9 @@ classdef UR3 < handle
         cameraOffset = transl(0,0,0); % camera offset from end-effector
         cameraFps = 25; 
 
+        % Boolean to communicate to UR3 through ROS
+        ROSOn = false;
+
         % Boolean to run analysis of RMRC
         analysis = false;
 
@@ -122,10 +125,55 @@ classdef UR3 < handle
 
         end
 
+        function ROSInit(self)
+            rosinit('192.168.0.253'); % Assuming a UTS Pi, otherwise please change this
+            jointStateSubscriber = rossubscriber('joint_states','sensor_msgs/JointState');
+            if ~isempty(jointStateSubscriber.LatestMessage)
+                display('ROS CONNECTED')
+                self.ROSOn = true;
+            else
+                display ('ROS NOT CONNECTED')
+            end
+        end
+
+        function ROSSendGoal(self, q)
+            
+            % Check if ROS communication is enabled
+            if true(self.ROSOn)
+                % Establish Joint Names
+                jointNames = {'shoulder_pan_joint','shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint'};
+    
+                [client, goal] = rosactionclient('/scaled_pos_joint_traj_controller/follow_joint_trajectory');
+                goal.Trajectory.JointNames = jointNames;
+                goal.Trajectory.Header.Seq = 1;
+                goal.Trajectory.Header.Stamp = rostime('Now','system');
+                goal.GoalTimeTolerance = rosduration(0.05);
+                bufferSeconds = 1; % This allows for the time taken to send the message. If the network is fast, this could be reduced.
+                durationSeconds = 1/self.cameraFps; % This is how many seconds the movement will take
+
+                % Get current joint state
+                startJointSend = rosmessage('trajectory_msgs/JointTrajectoryPoint');
+                startJointSend.Positions = currentJointState_123456;
+                startJointSend.TimeFromStart = rosduration(0);     
+                  
+                % Get next/final joint state
+                endJointSend = rosmessage('trajectory_msgs/JointTrajectoryPoint');
+                endJointSend.Positions = q;
+                endJointSend.TimeFromStart = rosduration(durationSeconds);
+                
+                % Set goal
+                goal.Trajectory.Points = [startJointSend; endJointSend];
+
+                % Send goal to UR3
+                goal.Trajectory.Header.Stamp = jointStateSubscriber.LatestMessage.Header.Stamp + rosduration(bufferSeconds);
+                sendGoal(client,goal);
+            end
+        end
+
         function MoveJoints (self, q)
             % MoveJoints - For joint interpolation movement
             
-            time = 3;
+            time = 10;
             deltaT = 1/self.cameraFps;
             steps = 100;
             qMatrix = jtraj(self.model.getpos(),q,steps);
@@ -152,7 +200,7 @@ classdef UR3 < handle
             % MoveBot - Main function for moving the robot using RMRC
 
             % RMRC PARAMETERS
-            t = 5;              % Allcoated time (s) for movement, need to make dynamic for small/large movements
+            t = 10;              % Allcoated time (s) for movement, need to make dynamic for small/large movements
             deltaT = 1/self.cameraFps;
             steps = t/deltaT;   % No. of steps for simulation
             delta = 2*pi/steps; % Small angle change
