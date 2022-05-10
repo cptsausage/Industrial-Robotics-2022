@@ -20,10 +20,9 @@ classdef LaserBot < UR3
         targetSize = 0.2 % 20x20 cm
         targetDepth = 1; % Approximate distance between the bots
         cameraTargets;
-
+        laserObject;
         % Target data
         targetHit; % Binary property to mark if the target has been hit
-
     end
 
     methods
@@ -39,8 +38,8 @@ classdef LaserBot < UR3
             self.PlotCamera();
             
             % Move UR3 to start position
-            self.MoveJoints(self.defaultPosition);
-            
+            %%self.MoveJoints(self.defaultPosition);
+            self.MoveJointsWithLaser(self.defaultPosition);
         end
 
         function PlotLaserBot(self)
@@ -124,7 +123,7 @@ classdef LaserBot < UR3
             % CheckIfHit - Determine if target has been hit
         end
 
-        function laserObject = ReturnLaser(self)
+        function ReturnLaser(self,q)
         %%Incomplete - Laser bot function that returns a laser object which
         %%can be used in robottargetsimulation for target bot with plane
         %%intersection to determine if there is a hit
@@ -137,8 +136,50 @@ classdef LaserBot < UR3
              ,reshape(updatedConePoints(:,2),conePointsSize) ...
              ,reshape(updatedConePoints(:,3),conePointsSize));
             coneEnds = [cone_h.XData(2,:)', cone_h.YData(2,:)', cone_h.ZData(2,:)'];
-            laserObject = endEffectorTr
+            
             drawnow();
-        end    
+        end
+
+        function MoveJointsWithLaser(self,q)    
+            
+            deltaT = 1/self.cameraFps;
+            steps = 100;
+            qMatrix = jtraj(self.model.getpos(),q,steps);
+            for i = 1:steps
+            hold on
+            if(i ~= 1)
+                delete(cone_h)
+            end
+            endEffectorTr = self.model.getpos()
+            eT = self.model.fkine(endEffectorTr)
+    
+            [X,Y,Z] = cylinder([0,0.1],6);
+            Z = Z * 10;
+            updatedConePoints = [eT * [X(:),Y(:),Z(:),ones(numel(X),1)]']';
+            conePointsSize = size(X);
+            cone_h = surf(reshape(updatedConePoints(:,1),conePointsSize) ...
+             ,reshape(updatedConePoints(:,2),conePointsSize) ...
+             ,reshape(updatedConePoints(:,3),conePointsSize));
+            coneEnds = [cone_h.XData(2,:)', cone_h.YData(2,:)', cone_h.ZData(2,:)'];
+              
+                for j = 1:self.model.n                                                             % Loop through joints 1 to 6
+                    if qMatrix(i,j) < self.model.qlim(j,1)                     % If next joint angle is lower than joint limit...
+                        display(['Reaching joint ' num2str(j) ' limit, stopping...'])
+                        return
+                    elseif qMatrix(i,j) > self.model.qlim(j,2)                 % If next joint angle is greater than joint limit ...
+                        display(['Reaching joint ' num2str(j) ' limit, stopping...'])
+                        return
+                    end
+                end
+                self.model.animate(qMatrix(i,:));
+                if self.cameraOn == true
+                    self.cameraModel.T = self.model.fkine(self.model.getpos())*self.cameraOffset; % Update camera position
+                    self.cameraModel.plot_camera();
+                end
+                pause(deltaT);
+                hold on
+            end
+        end
+
     end
 end
