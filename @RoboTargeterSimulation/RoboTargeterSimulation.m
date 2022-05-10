@@ -36,17 +36,34 @@ classdef RoboTargeterSimulation
             % generate floating targets for the laser bot to find and
             % target
             
-            self.targetBot.SetRandomTarget();
+            hits = 0;
+
+            for round = 1:10
+
+                self.targetBot.SetRandomTarget();
+                
+    
+                % For simulation, give target positions to laserbot for
+                % 'GetImage' function
+                self.laserBot.targetPlots = self.targetBot.targetCorners;
+    
+                self.laserBot.SetCamera();
+    
+                % Right camera to avoid point confusion
+    %             twistWristQ = self.laserBot.defaultPosition + deg2rad([0,0,0,0,0,45]);
+    %             self.laserBot.MoveJoints(twistWristQ);
+    
+                self.laserBot.FindTarget();
+
+                if self.laserBot.targetHit
+                    display(['Round ', num2str(round),' result: Target hit!'])
+                    hits = hits + 1;
+                else
+                    display(['Round ', num2str(round),' result: Target not hit!'])
+                end
             
-
-            % For simulation, give target positions to laserbot for
-            % 'GetImage' function
-            self.laserBot.targetPlots = self.targetBot.targetCorners;
-
-            self.laserBot.SetCamera();
-
-            self.laserBot.FindTarget();
-
+            end
+            display([num2str(round), ' rounds over, final score is ', num2str(hits), ' hits!'])
 
         end
 

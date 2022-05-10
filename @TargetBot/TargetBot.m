@@ -30,7 +30,7 @@ classdef TargetBot < UR3
 
             self@UR3();
             self.name = 'TargetBot';
-            self.model.base = transl(2,0,0)*trotz(pi);
+            self.model.base = transl(1,0,0)*trotz(pi);
             self.MoveJoints(self.defaultPosition);
         end
 
@@ -48,21 +48,25 @@ classdef TargetBot < UR3
         end
 
         function SetRandomTarget(self)
-            % SetTarget - Random Target setting for simulation
-            xRange = [1.3 1.5];
-            yRange = [-0.3 0.3];
-            zRange = [0.2 0.6];
+            % SetTarget - Set simulated target and target bot to random position within
+            % set bounds
+            xRange = [0.5 0.8];
+            yRange = [-0.2 0.2];
+            zRange = [0.3 0.6];
             x = xRange(1) + (xRange(2)-xRange(1))*rand(1,1);
             y = yRange(1) + (yRange(2)-yRange(1))*rand(1,1);
             z = zRange(1) + (zRange(2)-zRange(1))*rand(1,1);
-            self.targetCorners = mkgrid(2, 0.2, 'T', transl(x,y,z)*troty(pi/2));
+            self.targetCorners = mkgrid(2, 0.1, 'T', transl(x,y,z)*troty(pi/2));
+            q = self.model.ikcon(transl(x,y,z)*troty(-pi/2), self.model.getpos());
+            self.MoveJoints(q);
             self.PlotTarget;
         end
 
         function PlotTarget(self)
-            clear self.targetPlot
-            hold on
-            plot_sphere(self.targetCorners,0.05,'b');
+            delete(self.targetPlot);
+            hold on;
+            plot = [self.targetCorners, self.targetCorners(:,1)];
+            self.targetPlot = line(plot(1,:), plot(2,:), plot(3,:),'Color','r','LineWidth',5);
         end
 % MIGHT SPLIT 'PlotTargetBot' INTO 'MoveTarget' AND 'MoveBot' IN UR3 MAIN
 % CLASS

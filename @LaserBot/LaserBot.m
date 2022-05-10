@@ -15,10 +15,11 @@ classdef LaserBot < UR3
         % Camera image
         cameraImage; % Property holding camera image 
         
-        % Desired positions of target corners in camera plane
-        cameraTargets = [...
-            602 422 422 602;...
-            422 422 602 602]; 
+        % Desired positions of target corners in camera plane based on
+        % real target size
+        targetSize = 0.2 % 20x20 cm
+        targetDepth = 1; % Approximate distance between the bots
+        cameraTargets;
 
         % Target data
         targetHit; % Binary property to mark if the target has been hit
@@ -48,8 +49,19 @@ classdef LaserBot < UR3
         end
 
         function SetCamera(self)
-            % SetCamera - Sets target points in image plane
+            % SetCamera - Sets target points in image plane based on target
+            % size
             if self.cameraOn
+                % Calculate object size in image, proprtional to 
+                % realsize * focallength / objectdistance
+                sizeInImage = self.targetSize*self.cameraModel.f/self.targetDepth;
+                % Scale image to pixel size
+                sizeInImage = sizeInImage/self.cameraModel.rho(1);
+                % Set camera targets based on target size in image
+                principalPoint = self.cameraModel.pp;
+                u = [principalPoint(1)-sizeInImage/2, principalPoint(1)+sizeInImage/2];
+                v = [principalPoint(2)-sizeInImage/2, principalPoint(2)+sizeInImage/2];
+                self.cameraTargets = [u(2) u(1) u(1) u(2); v(1) v(1) v(2) v(2)];
                 self.cameraModel.plot(self.cameraTargets, '*');
                 self.cameraModel.hold;
             end
@@ -66,36 +78,36 @@ classdef LaserBot < UR3
             self.targetHit = false;
             self.GetImage();
             deltaT = 1/self.cameraFps;
-            depth = 1.5;
             lambda = 0.6;
             i = 1;
             while ~self.targetHit 
-                    uv = self.cameraModel.plot(self.targetPlots);
+                uv = self.cameraModel.plot(self.targetPlots);
 
-                    e = [self.cameraTargets(:,1)-uv(:,1);self.cameraTargets(:,2)-uv(:,2);self.cameraTargets(:,3)-uv(:,3);self.cameraTargets(:,4)-uv(:,4)];
-                
-                    J = self.cameraModel.visjac_p(uv, depth);
-                    v = lambda*pinv(J)*e;
-                    v = v*deltaT;
-                
-                    nT = self.model.fkine(self.model.getpos())*transl(v(1),v(2),v(3))*trotx(v(4))*troty(v(5))*trotz(v(6));
-                    nq = self.model.ikcon(nT,self.model.getpos());
-                    self.model.animate(nq);
-                
-                    Tc0 = self.model.fkine(self.model.getpos());
-                    self.cameraModel.T = Tc0;
-                
-                    self.cameraModel.plot_camera('Tcam',Tc0,'scale',0.05);
-                    pause(deltaT);
-                    i = i+1;
-                    if max(e, [], 'all') < 15
-                        display('Target reached!');
-                        self.targetHit = true;
-                    elseif i >= 150
-                        display('Target not reached!');
-                        break
-                    end
+                e = [self.cameraTargets(:,1)-uv(:,1);self.cameraTargets(:,2)-uv(:,2);self.cameraTargets(:,3)-uv(:,3);self.cameraTargets(:,4)-uv(:,4)];
+            
+                J = self.cameraModel.visjac_p(uv, self.targetDepth);
+                v = lambda*pinv(J)*e;
+                v = v*deltaT;
+            
+                nT = self.model.fkine(self.model.getpos())*transl(v(1),v(2),v(3))*trotx(v(4))*troty(v(5))*trotz(v(6));
+                nq = self.model.ikcon(nT,self.model.getpos());
+                self.model.animate(nq);
+            
+                Tc0 = self.model.fkine(self.model.getpos());
+                self.cameraModel.T = Tc0;
+            
+                self.cameraModel.plot_camera('Tcam',Tc0,'scale',0.05);
+                pause(deltaT);
+                i = i+1;
+                if max(e, [], 'all') < 15
+                    display('Target reached!');
+                    self.targetHit = true;
+                elseif i >= 150
+                    display('Target not reached!');
+                    break
+                end
             end
+            self.cameraModel.clf();
         end
 
         function desiredPose = DetermineDesiredPose(self,targetLocation)
@@ -111,6 +123,7 @@ classdef LaserBot < UR3
         function CheckIfHit(self)
             % CheckIfHit - Determine if target has been hit
         end
+
         function laserObject = ReturnLaser(self)
         %%Incomplete - Laser bot function that returns a laser object which
         %%can be used in robottargetsimulation for target bot with plane
