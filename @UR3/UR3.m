@@ -126,9 +126,12 @@ classdef UR3 < handle
         end
 
         function ROSInit(self)
+    
             rosshutdown;
             rosinit('192.168.0.253'); % Assuming a UTS Pi, otherwise please change this
             jointStateSubscriber = rossubscriber('joint_states','sensor_msgs/JointState');
+            pause(2);
+
             if ~isempty(jointStateSubscriber.LatestMessage)
                 display('ROS CONNECTED')
                 self.ROSOn = true;
@@ -139,10 +142,17 @@ classdef UR3 < handle
         end
 
         function ROSSendGoal(self, q)
-            
+            display('Test 1')
             % Check if ROS communication is enabled
-            if self.ROSOn
+            if self.ROSOn == true
+                display('Test 2')
                 % Establish Joint Names
+                jointStateSubscriber = rossubscriber('joint_states','sensor_msgs/JointState');
+                pause(2); % Pause to give time for a message to appear
+                currentJointState_321456 = (jointStateSubscriber.LatestMessage.Position); % Note the default order of the joints is 3,2,1,4,5,6
+                currentJointState_123456 = [currentJointState_321456(3:-1:1)',currentJointState_321456(4:6)'];
+
+                
                 jointNames = {'shoulder_pan_joint','shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint'};
     
                 [client, goal] = rosactionclient('/scaled_pos_joint_traj_controller/follow_joint_trajectory');
@@ -161,6 +171,7 @@ classdef UR3 < handle
                 % Get next/final joint state
                 endJointSend = rosmessage('trajectory_msgs/JointTrajectoryPoint');
                 endJointSend.Positions = q;
+                
                 endJointSend.TimeFromStart = rosduration(durationSeconds);
                 
                 % Set goal
@@ -193,8 +204,10 @@ classdef UR3 < handle
                     self.cameraModel.T = self.model.fkine(self.model.getpos())*self.cameraOffset; % Update camera position
                     self.cameraModel.plot_camera();
                 end
-                if self.ROSOn
+                self.ROSOn
+                if self.ROSOn == 1 
                     self.ROSSendGoal(qMatrix(i,:));
+                    display('Test 0')
                     pause(2); % For testing
                 end
                 pause(deltaT);

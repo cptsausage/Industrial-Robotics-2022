@@ -102,6 +102,14 @@ classdef LaserBot < UR3
                 self.cameraModel.T = Tc0;
             
                 self.cameraModel.plot_camera('Tcam',Tc0,'scale',0.05);
+                display('Test -2')
+                self.ROSOn
+                if self.ROSOn == 1 
+                    self.ROSSendGoal(nq);
+                    display('Test 0')
+                    pause(2); % For testing
+                end
+                display('Test -1')
                 pause(deltaT);
                 i = i+1;
                 if max(e, [], 'all') < 15
@@ -113,6 +121,7 @@ classdef LaserBot < UR3
                 end
             end
             self.cameraModel.clf();
+            
         end
 
         function desiredPose = DetermineDesiredPose(self,targetLocation)
