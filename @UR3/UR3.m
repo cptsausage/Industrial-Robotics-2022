@@ -126,14 +126,17 @@ classdef UR3 < handle
         end
 
         function ROSInit(self)
-            rosinit('192.168.0.253'); % Assuming a UTS Pi, otherwise please change this
-            jointStateSubscriber = rossubscriber('joint_states','sensor_msgs/JointState');
-            if ~isempty(jointStateSubscriber.LatestMessage)
-                display('ROS CONNECTED')
-                self.ROSOn = true;
-            else
-                display ('ROS NOT CONNECTED')
-            end
+             try rosinit('192.168.0.253'); % Assuming a UTS Pi, otherwise please change this
+                jointStateSubscriber = rossubscriber('joint_states','sensor_msgs/JointState');
+                if ~isempty(jointStateSubscriber.LatestMessage)
+                    display('ROS CONNECTED')
+                    self.ROSOn = true;
+                else
+                    display ('ROS NOT CONNECTED')
+                end
+             catch
+                 return
+             end
         end
 
         function ROSSendGoal(self, q)
@@ -192,7 +195,12 @@ classdef UR3 < handle
                     self.cameraModel.T = self.model.fkine(self.model.getpos())*self.cameraOffset; % Update camera position
                     self.cameraModel.plot_camera();
                 end
+                if self.ROSOn
+                    self.ROSSendGoal(qMatrix(i,:));
+                    pause(2); % For testing
+                end
                 pause(deltaT);
+
             end
         end
 
@@ -328,6 +336,16 @@ classdef UR3 < handle
             refline(0,epsilon)
             title('Manipulability')
 
+        end
+
+        function CollisionDetected = CheckCollisions (self, q);
+            % CheckCollisions - Takes the model and the next joint
+            % positions q, constructs ellipsoid points centered around the joint
+            % midpoints and checks intersections between ellipsoids and the
+            % floor/table
+            CollisionDetected = 0;          % 
+            
+            return
         end
 
         function NearSingularityM = CheckSingularity(self,q)

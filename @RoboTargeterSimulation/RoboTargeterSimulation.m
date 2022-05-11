@@ -35,10 +35,12 @@ classdef RoboTargeterSimulation
             % RandomTargetPractice - Uses bot functions to randomly
             % generate floating targets for the laser bot to find and
             % target
+
+            self.laserBot.ROSInit();
             
             hits = 0;
 
-            for round = 1:10
+            for round = 1:5
 
                 self.targetBot.SetRandomTarget();
                 
@@ -66,6 +68,8 @@ classdef RoboTargeterSimulation
             display([num2str(round), ' rounds over, final score is ', num2str(hits), ' hits!'])
 
         end
+
+
 
         function CalculateError(self)
             %CalculateError - Calculate error/accuracy between target and

@@ -38,8 +38,17 @@ classdef LaserBot < UR3
             self.cameraOn = true;
             self.PlotCamera();
             
+            if self.ROSOn
+                jointStateSubscriber = rossubscriber('joint_states','sensor_msgs/JointState');
+                pause(2); % Pause to give time for a message to appear
+                currentJointState_321456 = (jointStateSubscriber.LatestMessage.Position); % Note the default order of the joints is 3,2,1,4,5,6
+                startq = [currentJointState_321456(3:-1:1)',currentJointState_321456(4:6)'];
+                self.model.animate(startq);
+            else
+                self.MoveJoints(self.defaultPosition);
+            end
+
             % Move UR3 to start position
-            self.MoveJoints(self.defaultPosition);
             
         end
 

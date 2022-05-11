@@ -17,18 +17,20 @@ pause(2); % Pause to give time for a message to appear
 currentJointState_321456 = (jointStateSubscriber.LatestMessage.Position); % Note the default order of the joints is 3,2,1,4,5,6
 currentJointState_123456 = [currentJointState_321456(3:-1:1)',currentJointState_321456(4:6)'];
 
-%% Check Latest Message
+% Check Latest Message
 
 if isempty(jointStateSubscriber.LatestMessage)
     display('Joint State Cannot be Obtained')
     return
+else
+    jointStateSubscriber.LatestMessage
 end
 
-%% Establish Joint Names
+% Establish Joint Names
 
 jointNames = {'shoulder_pan_joint','shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint'};
 
-%% Example Communication: Rotating joints 1 and 6 by pi/8 over 5 seconds
+% Example Communication: Rotating joints 1 and 6 by pi/8 over 5 seconds
 
 [client, goal] = rosactionclient('/scaled_pos_joint_traj_controller/follow_joint_trajectory');
 % waitForServer(client);
@@ -53,4 +55,4 @@ goal.Trajectory.Points = [startJointSend; endJointSend];
 % Send Goal to UR3
 
 goal.Trajectory.Header.Stamp = jointStateSubscriber.LatestMessage.Header.Stamp + rosduration(bufferSeconds);
-sendGoal(client,goal);
+sendGoal(client,goal)
