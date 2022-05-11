@@ -126,23 +126,22 @@ classdef UR3 < handle
         end
 
         function ROSInit(self)
-             try rosinit('192.168.0.253'); % Assuming a UTS Pi, otherwise please change this
-                jointStateSubscriber = rossubscriber('joint_states','sensor_msgs/JointState');
-                if ~isempty(jointStateSubscriber.LatestMessage)
-                    display('ROS CONNECTED')
-                    self.ROSOn = true;
-                else
-                    display ('ROS NOT CONNECTED')
-                end
-             catch
-                 return
-             end
+            rosshutdown;
+            rosinit('192.168.0.253'); % Assuming a UTS Pi, otherwise please change this
+            jointStateSubscriber = rossubscriber('joint_states','sensor_msgs/JointState');
+            if ~isempty(jointStateSubscriber.LatestMessage)
+                display('ROS CONNECTED')
+                self.ROSOn = true;
+            else
+                display ('ROS NOT CONNECTED')
+            end
+             
         end
 
         function ROSSendGoal(self, q)
             
             % Check if ROS communication is enabled
-            if true(self.ROSOn)
+            if self.ROSOn
                 % Establish Joint Names
                 jointNames = {'shoulder_pan_joint','shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint'};
     
