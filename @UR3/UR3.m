@@ -175,7 +175,6 @@ classdef UR3 < handle
 
         function MoveJoints (self, q)
             % MoveJoints - For joint interpolation movement
-            
             time = 10;
             deltaT = 1/self.cameraFps;
             steps = 100;
