@@ -11,7 +11,7 @@ classdef UR3 < handle
         model;
 
         % Designated UR3 workspace for initial plot
-        workspace = [-1.5 1.5 -1.5 1.5 -0.3 1];
+        workspace = [-0.5 0.5 -0.3 1.3 -0.03 1];
 
         % Default starting position for UR3
         defaultPosition = deg2rad([-90,-45,-90,-45,0,90]);
@@ -204,7 +204,7 @@ classdef UR3 < handle
                     self.cameraModel.T = self.model.fkine(self.model.getpos())*self.cameraOffset; % Update camera position
                     self.cameraModel.plot_camera();
                 end
-                self.ROSOn
+%                 self.ROSOn
                 if self.ROSOn == 1 
                     self.ROSSendGoal(qMatrix(i,:));
                     display('Test 0')

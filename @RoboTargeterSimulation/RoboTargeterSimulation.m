@@ -36,7 +36,7 @@
             % generate floating targets for the laser bot to find and
             % target
 
-            self.laserBot.ROSInit();
+%             self.laserBot.ROSInit();
             
             hits = 0;
 
