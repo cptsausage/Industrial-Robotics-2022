@@ -7,6 +7,7 @@ sim = RoboTargeterSimulation;
 sim.RandomTargetPractice;
 
 %% ROS INIT Test
+rosshutdown
 rosinit('192.168.0.253'); % Assuming a UTS Pi, otherwise please change this
 jointStateSubscriber = rossubscriber('joint_states','sensor_msgs/JointState');
 
