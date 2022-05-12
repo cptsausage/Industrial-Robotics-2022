@@ -18,7 +18,7 @@ classdef LaserBot < UR3
         % Desired positions of target corners in camera plane based on
         % real target size
         targetSize = 0.2 % 20x20 cm
-        targetDepth = 1; % Approximate distance between the bots
+        targetDepth = 1; % Approximate distance between the target/laser
         cameraTargets;
         laserObject;
         % Target data
@@ -31,7 +31,7 @@ classdef LaserBot < UR3
             %   Constructor calls base class
             self@UR3();
             self.name = 'LaserBot';
-            self.model.base = eye(4,4); % Set the position of the model
+            self.model.base = eye(4,4)*trotz(pi/2); % Set the position of the model
             
             % Set up camera
             self.cameraOn = true;
@@ -83,7 +83,7 @@ classdef LaserBot < UR3
             self.targetHit = false;
             self.GetImage();
             deltaT = 1/self.cameraFps;
-            lambda = 0.6;
+            lambda = 0.7;
             i = 1;
             while ~self.targetHit 
                 uv = self.cameraModel.plot(self.targetPlots);
@@ -102,18 +102,26 @@ classdef LaserBot < UR3
                 self.cameraModel.T = Tc0;
             
                 self.cameraModel.plot_camera('Tcam',Tc0,'scale',0.05);
-                display('Test -2')
-                self.ROSOn
+%                 display('Test -2')
                 if self.ROSOn == 1 
                     self.ROSSendGoal(nq);
-                    display('Test 0')
+%                     display('Test 0')
                     pause(2); % For testing
                 end
-                display('Test -1')
+%                 display('Test -1')
                 pause(deltaT);
                 i = i+1;
-                if max(e, [], 'all') < 15
+                if max(abs(e), [], 'all') < 20
                     display('Target reached!');
+                    
+                    % FIRE THE LASERS!!!
+                    laserStart = self.model.fkine(self.model.getpos());
+                    laserEnd = laserStart*transl(0,0,self.laserRange);
+                    laserPoints = [laserStart(1:3,4), laserEnd(1:3,4)];
+                    laserPlot = line(laserPoints(1,:), laserPoints(2,:), laserPoints(3,:), 'Color', 'r', 'LineWidth', 5);
+                    pause(1);
+                    delete(laserPlot);
+                    
                     self.targetHit = true;
                 elseif i >= 150
                     display('Target not reached!');
