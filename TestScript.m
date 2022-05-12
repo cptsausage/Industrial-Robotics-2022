@@ -7,15 +7,16 @@ sim = RoboTargeterSimulation;
 sim.RandomTargetPractice;
 
 %% ROS INIT Test
+rosshutdown;
 rosinit('192.168.0.253'); % Assuming a UTS Pi, otherwise please change this
 jointStateSubscriber = rossubscriber('joint_states','sensor_msgs/JointState');
 
-%% Current Joint State
+% Current Joint State
 
 jointStateSubscriber = rossubscriber('joint_states','sensor_msgs/JointState');
 pause(2); % Pause to give time for a message to appear
-currentJointState_321456 = (jointStateSubscriber.LatestMessage.Position); % Note the default order of the joints is 3,2,1,4,5,6
-currentJointState_123456 = [currentJointState_321456(3:-1:1)',currentJointState_321456(4:6)'];
+currentJointState_321456 = (jointStateSubscriber.LatestMessage.Position)'; % Note the default order of the joints is 3,2,1,4,5,6
+currentJointState_123456 = [currentJointState_321456(3:-1:1),currentJointState_321456(4:6)];
 
 % Check Latest Message
 
@@ -56,3 +57,4 @@ goal.Trajectory.Points = [startJointSend; endJointSend];
 
 goal.Trajectory.Header.Stamp = jointStateSubscriber.LatestMessage.Header.Stamp + rosduration(bufferSeconds);
 sendGoal(client,goal)
+
