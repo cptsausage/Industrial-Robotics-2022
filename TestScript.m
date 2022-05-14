@@ -1,5 +1,5 @@
 %% Test Script for running robot sim
-clf;
+close all;
 clear;
 
 sim = RoboTargeterSimulation;

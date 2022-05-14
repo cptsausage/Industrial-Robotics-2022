@@ -14,7 +14,7 @@ classdef UR3 < handle
         workspace = [-0.5 0.5 -0.3 1.3 -0.03 1];
 
         % Default starting position for UR3
-        defaultPosition = deg2rad([-90,-45,-90,-45,0,90]);
+        defaultPosition = deg2rad([0,-45,-90,-45,0,90]);
 
         % Nice starting pose before performing RMRC in cartesian plane
         startT = transl(0.4,0,0.5)*troty(pi/2);
@@ -22,12 +22,13 @@ classdef UR3 < handle
         % Camera Parameters
         cameraOn = false;
         % CHANGE ONCE USB CAM SPECS ARE FOUND
+        ur_cam;                                 % Property for webcam
         cameraModel = CentralCamera(...
                 'focal', 0.08,...
                 'pixel', 10e-5,...
-                'resolution', [1024 1024],...
-                'centre', [512 512], ...
-                'name', 'Camera');
+                'resolution', [640 480],...
+                'centre', [320 240], ...
+                'name', 'C922 Pro Stream Webcam');
         cameraOffset = transl(0,0,0); % camera offset from end-effector
         cameraFps = 25; 
 
@@ -114,6 +115,10 @@ classdef UR3 < handle
             end
         end
 
+        function CameraInit(self)
+            self.ur_cam = webcam(self.cameraModel.name);
+        end
+
         function PlotCamera(self)
             % If camera setting is on, create and plot camera object onto
             % model
@@ -126,9 +131,7 @@ classdef UR3 < handle
         end
 
         function ROSInit(self)
-    
-            rosshutdown;
-            rosinit('192.168.0.253'); % Assuming a UTS Pi, otherwise please change this
+            
             jointStateSubscriber = rossubscriber('joint_states','sensor_msgs/JointState');
             pause(2);
 
@@ -138,6 +141,16 @@ classdef UR3 < handle
             else
                 display ('ROS NOT CONNECTED')
             end
+
+            if self.ROSOn
+                jointStateSubscriber = rossubscriber('joint_states','sensor_msgs/JointState');
+                pause(2); % Pause to give time for a message to appear
+                currentJointState_321456 = (jointStateSubscriber.LatestMessage.Position); % Note the default order of the joints is 3,2,1,4,5,6
+                startq = [currentJointState_321456(3:-1:1)',currentJointState_321456(4:6)'];
+                self.model.animate(startq);
+            end
+
+            self.MoveJoints(self.defaultPosition);     
              
         end
 
@@ -148,7 +161,7 @@ classdef UR3 < handle
                 display('Test 2')
                 % Establish Joint Names
                 jointStateSubscriber = rossubscriber('joint_states','sensor_msgs/JointState');
-                pause(2); % Pause to give time for a message to appear
+                pause(1);
                 currentJointState_321456 = (jointStateSubscriber.LatestMessage.Position); % Note the default order of the joints is 3,2,1,4,5,6
                 currentJointState_123456 = [currentJointState_321456(3:-1:1)',currentJointState_321456(4:6)'];
 
@@ -161,7 +174,7 @@ classdef UR3 < handle
                 goal.Trajectory.Header.Stamp = rostime('Now','system');
                 goal.GoalTimeTolerance = rosduration(0.05);
                 bufferSeconds = 1; % This allows for the time taken to send the message. If the network is fast, this could be reduced.
-                durationSeconds = 1/self.cameraFps; % This is how many seconds the movement will take
+                durationSeconds = 3; % This is how many seconds the movement will take
 
                 % Get current joint state
                 startJointSend = rosmessage('trajectory_msgs/JointTrajectoryPoint');
@@ -179,15 +192,18 @@ classdef UR3 < handle
 
                 % Send goal to UR3
                 goal.Trajectory.Header.Stamp = jointStateSubscriber.LatestMessage.Header.Stamp + rosduration(bufferSeconds);
+%                 display('Waiting...')
+                pause(3);
                 sendGoal(client,goal);
+%                 display('Waiting...')
+                pause(3);
             end
         end
 
         function MoveJoints (self, q)
             % MoveJoints - For joint interpolation movement
-            time = 10;
             deltaT = 1/self.cameraFps;
-            steps = 100;
+            steps = 10;
             qMatrix = jtraj(self.model.getpos(),q,steps);
             for i = 1:steps
                 for j = 1:self.model.n                                                             % Loop through joints 1 to 6
@@ -208,7 +224,6 @@ classdef UR3 < handle
                 if self.ROSOn == 1 
                     self.ROSSendGoal(qMatrix(i,:));
                     display('Test 0')
-                    pause(2); % For testing
                 end
                 pause(deltaT);
 

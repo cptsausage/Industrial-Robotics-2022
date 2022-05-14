@@ -10,7 +10,7 @@ classdef LaserBot < UR3
         laserRange = 3; %Placeholder (metres)
         laserOffset = zeros(4,4); % laser offset from end-effector
 
-        targetPlots; % Simulation-fed target locations for 'GetImage'
+        targetPlots; % Simulation/Camera-fed target locations for 'GetImage'
         
         % Camera image
         cameraImage; % Property holding camera image 
@@ -31,21 +31,14 @@ classdef LaserBot < UR3
             %   Constructor calls base class
             self@UR3();
             self.name = 'LaserBot';
-            self.model.base = eye(4,4)*trotz(pi/2); % Set the position of the model
+            self.model.base = eye(4,4); % Set the position of the model
             
             % Set up camera
             self.cameraOn = true;
             self.PlotCamera();
             
-            if self.ROSOn
-                jointStateSubscriber = rossubscriber('joint_states','sensor_msgs/JointState');
-                pause(2); % Pause to give time for a message to appear
-                currentJointState_321456 = (jointStateSubscriber.LatestMessage.Position); % Note the default order of the joints is 3,2,1,4,5,6
-                startq = [currentJointState_321456(3:-1:1)',currentJointState_321456(4:6)'];
-                self.model.animate(startq);
-            else
-                self.MoveJoints(self.defaultPosition);
-            end
+            % Move bot to default position
+            self.MoveJoints(self.defaultPosition);
         end
 
         function PlotLaserBot(self)
@@ -66,16 +59,21 @@ classdef LaserBot < UR3
                 principalPoint = self.cameraModel.pp;
                 u = [principalPoint(1)-sizeInImage/2, principalPoint(1)+sizeInImage/2];
                 v = [principalPoint(2)-sizeInImage/2, principalPoint(2)+sizeInImage/2];
-                self.cameraTargets = [u(2) u(1) u(1) u(2); v(1) v(1) v(2) v(2)];
-                self.cameraModel.plot(self.cameraTargets, '*');
-                self.cameraModel.hold;
+                self.cameraTargets = [u(1) u(2) u(2) u(1); v(1) v(1) v(2) v(2)];
+%                 self.cameraModel.plot(self.cameraTargets, '*');
+%                 self.cameraModel.hold;
             end
         end
 
         function GetImage(self)
-            %GetImage - Retrieve image from camera
-            Tc0 = self.model.fkine(self.model.getpos)*self.cameraOffset;
-            self.cameraModel.plot(self.targetPlots, 'Tcam', Tc0, 'o');
+            %GetImage - Retrieve image from camera, otherwise get
+            %simulation fed points
+            try self.cameraImage = self.ur_cam.snapshot;
+                pause(1/self.cameraFps);
+            catch
+                Tc0 = self.model.fkine(self.model.getpos)*self.cameraOffset;
+                self.cameraModel.plot(self.targetPlots, 'Tcam', Tc0, 'o');
+            end
         end
 
         function FindTarget(self)
@@ -85,47 +83,161 @@ classdef LaserBot < UR3
             deltaT = 1/self.cameraFps;
             lambda = 0.7;
             i = 1;
-            while ~self.targetHit 
-                uv = self.cameraModel.plot(self.targetPlots);
+            while ~self.targetHit
+                if ~isempty(self.cameraImage)
+                    % If the camera is sending images, perform real visual
+                    % servoing
+                    
+                    refImage = imread('Target.png');
+                    
+                    % Find SIFTFeatures in image
+                    refImage_gray = rgb2gray(refImage);
+                    refImage_pts = detectSIFTFeatures(refImage_gray);
+                    
+                    % Detect SIFT features in real camera frame
+                    
+                    realImage = self.ur_cam.snapshot;
+                    realImage_gray = rgb2gray(realImage);
+                    realImage_pts = detectSIFTFeatures(realImage_gray);
+                    
+                    % Extract and Match Feature Points
+                    [refFeatures, refPoints] = extractFeatures(refImage_gray, refImage_pts);
+                    [realFeatures, realPoints] = extractFeatures(realImage_gray, realImage_pts);
+                    
+                    refPairs = matchFeatures(refFeatures, realFeatures);
+                    
+                    refPoints_matched = refPoints(refPairs(:,1), :);
+                    realPoints_matched = realPoints(refPairs(:,2),:);
+                    
+                    % Locate Object in Scene using Feature Matches
+                    try
 
-                e = [self.cameraTargets(:,1)-uv(:,1);self.cameraTargets(:,2)-uv(:,2);self.cameraTargets(:,3)-uv(:,3);self.cameraTargets(:,4)-uv(:,4)];
-            
-                J = self.cameraModel.visjac_p(uv, self.targetDepth);
-                v = lambda*pinv(J)*e;
-                v = v*deltaT;
-            
-                nT = self.model.fkine(self.model.getpos())*transl(v(1),v(2),v(3))*trotx(v(4))*troty(v(5))*trotz(v(6));
-                nq = self.model.ikcon(nT,self.model.getpos());
-                self.model.animate(nq);
-            
-                Tc0 = self.model.fkine(self.model.getpos());
-                self.cameraModel.T = Tc0;
-            
-                self.cameraModel.plot_camera('Tcam',Tc0,'scale',0.05);
-%                 display('Test -2')
-                if self.ROSOn == 1 
-                    self.ROSSendGoal(nq);
-%                     display('Test 0')
-                    pause(2); % For testing
-                end
-%                 display('Test -1')
-                pause(deltaT);
-                i = i+1;
-                if max(abs(e), [], 'all') < 20
-                    display('Target reached!');
+                        [tform, refPoints_inlier, realPoints_inlier] = ...
+                            estimateGeometricTransform(refPoints_matched, realPoints_matched, "affine");
+                        
+                        % Display Location in Real Image
+                        
+                        boxPolygon = [1, 1;...
+                            size(refImage_gray,2), 1;...
+                            size(refImage_gray,2), size(refImage_gray, 1);...
+                            1, size(refImage_gray, 1);...
+                            1, 1];
+                        
+                        % Transform polygon onto new image
+                        
+                        newBoxPolygon = transformPointsForward(tform, boxPolygon);
+                        figure(2);
+                        imshow(realImage);
+                        hold on;
+                        line(newBoxPolygon(:,1),newBoxPolygon(:,2),'Color','y','LineWidth',5);
+                        hold off;
+                        title('UR Camera View');
+
+                        % Calculate Errors
+                        uv = newBoxPolygon(1:4,:)';
+    
+                        e = [self.cameraTargets(:,1)-uv(:,1);self.cameraTargets(:,2)-uv(:,2);self.cameraTargets(:,3)-uv(:,3);self.cameraTargets(:,4)-uv(:,4)];
                     
-                    % FIRE THE LASERS!!!
-                    laserStart = self.model.fkine(self.model.getpos());
-                    laserEnd = laserStart*transl(0,0,self.laserRange);
-                    laserPoints = [laserStart(1:3,4), laserEnd(1:3,4)];
-                    laserPlot = line(laserPoints(1,:), laserPoints(2,:), laserPoints(3,:), 'Color', 'r', 'LineWidth', 5);
-                    pause(1);
-                    delete(laserPlot);
+                        J = self.cameraModel.visjac_p(uv, self.targetDepth);
+                        v = lambda*pinv(J)*e;
                     
-                    self.targetHit = true;
-                elseif i >= 150
-                    display('Target not reached!');
-                    break
+                        %compute robot's Jacobian and inverse
+                        J2 = self.model.jacob0(self.model.getpos);
+                        Jinv = pinv(J2);
+                        % get joint velocities
+                        qv = Jinv*v;
+
+                        figure(1);
+                        nq = self.model.getpos()' + (1/self.cameraFps)*qv;
+                        self.model.animate(nq');
+                    
+                        Tc0 = self.model.fkine(self.model.getpos());
+                        self.cameraModel.T = Tc0;
+
+                        if self.ROSOn == 1 
+                            self.ROSSendGoal(nq);
+        %                     display('Test 0')
+                            pause(2); % For testing
+                        end
+        %                 display('Test -1')
+                        pause(deltaT);
+                        targetBox = [self.cameraTargets, self.cameraTargets(:,1)];
+                        i = i+1;
+                        if max(abs(e), [], 'all') < 20
+                            figure(2);
+                            line(targetBox(1,:), targetBox(2,:),'Color','g','LineWidth',5)
+                            
+                            display('Target reached!');
+                        
+                            % FIRE THE LASERS!!!
+                            figure(1);
+                            laserStart = self.model.fkine(self.model.getpos());
+                            laserEnd = laserStart*transl(0,0,self.laserRange);
+                            laserPoints = [laserStart(1:3,4), laserEnd(1:3,4)];
+                            laserPlot = line(laserPoints(1,:), laserPoints(2,:), laserPoints(3,:), 'Color', 'r', 'LineWidth', 5);
+                            pause(1);
+                            delete(laserPlot);
+                            
+                            self.targetHit = true;
+                        elseif i >= 150
+                            display('Target not reached!');
+                            break
+                        else
+                            figure(2);
+                            line(targetBox(1,:), targetBox(2,:),'Color','r','LineWidth',5)
+                            pause(1);
+                        end
+
+                    catch
+                        % If not enough matching SIFT features are found,
+                        % go through search routine
+                        figure(2);
+                        imshow(realImage);
+                    end
+                else
+                    % Simulation plotting if camera is not set up, use
+                    % virtual visual servoing
+                    uv = self.cameraModel.plot(self.targetPlots);
+    
+                    e = [self.cameraTargets(:,1)-uv(:,1);self.cameraTargets(:,2)-uv(:,2);self.cameraTargets(:,3)-uv(:,3);self.cameraTargets(:,4)-uv(:,4)];
+                
+                    J = self.cameraModel.visjac_p(uv, self.targetDepth);
+                    v = lambda*pinv(J)*e;
+                    v = v*deltaT;
+                
+                    nT = self.model.fkine(self.model.getpos())*transl(v(1),v(2),v(3))*trotx(v(4))*troty(v(5))*trotz(v(6));
+                    nq = self.model.ikcon(nT,self.model.getpos());
+                    self.model.animate(nq);
+                
+                    Tc0 = self.model.fkine(self.model.getpos());
+                    self.cameraModel.T = Tc0;
+                
+                    self.cameraModel.plot_camera('Tcam',Tc0,'scale',0.05);
+    %                 display('Test -2')
+                    if self.ROSOn == 1 
+                        self.ROSSendGoal(nq);
+    %                     display('Test 0')
+                        pause(2); % For testing
+                    end
+    %                 display('Test -1')
+                    pause(deltaT);
+                    i = i+1;
+                    if max(abs(e), [], 'all') < 20
+                        display('Target reached!');
+                        
+                        % FIRE THE LASERS!!!
+                        laserStart = self.model.fkine(self.model.getpos());
+                        laserEnd = laserStart*transl(0,0,self.laserRange);
+                        laserPoints = [laserStart(1:3,4), laserEnd(1:3,4)];
+                        laserPlot = line(laserPoints(1,:), laserPoints(2,:), laserPoints(3,:), 'Color', 'r', 'LineWidth', 5);
+                        pause(1);
+                        delete(laserPlot);
+                        
+                        self.targetHit = true;
+                    elseif i >= 150
+                        display('Target not reached!');
+                        break
+                    end
                 end
             end
             self.cameraModel.clf();

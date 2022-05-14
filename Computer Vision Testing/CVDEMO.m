@@ -8,7 +8,7 @@ refImage = imread('qr-code.png');
 % imshowpair(refImage, realImage, 'montage');
 title('Reference Image (Left) | Real Image (Right)')
 
-% Find ORBFeatures
+% Find SIFTFeatures
 refImage_gray = rgb2gray(refImage);
 refImage_pts = detectSIFTFeatures(refImage_gray);
 
@@ -19,7 +19,7 @@ plot(refImage_pts.selectStrongest(50));
 hold off;
 title('SURF Features in Reference Image');
 
-%% Detect SURF features in real image
+%% Detect SIFT features in real image
 
 cam = webcam('C922 Pro Stream Webcam');
 

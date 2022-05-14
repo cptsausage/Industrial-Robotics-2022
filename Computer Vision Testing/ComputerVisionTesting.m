@@ -59,7 +59,6 @@ for i = 1:500
         hold off;
         title('Object Location in Real Image');
         
-        
         uv = newBoxPolygon(1:4,:)';
 
         principalPoint = [640/2, 480/2];
