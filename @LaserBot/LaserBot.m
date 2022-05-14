@@ -4,7 +4,8 @@ classdef LaserBot < UR3
     %   'shooting' the target with a laser pointer
 
     properties
-        
+
+
         % Laser Parameters
         laserModel = 'Laser Model Here';
         laserRange = 3; %Placeholder (metres)
@@ -17,8 +18,8 @@ classdef LaserBot < UR3
         
         % Desired positions of target corners in camera plane based on
         % real target size
-        targetSize = 0.2 % 20x20 cm
-        targetDepth = 1; % Approximate distance between the target/laser
+        targetSize = 0.18 % 18x18 cm
+        targetDepth = 0.7; % Approximate distance between the target/laser
         cameraTargets;
         laserObject;
         % Target data
@@ -38,6 +39,8 @@ classdef LaserBot < UR3
             self.PlotCamera();
             
             % Move bot to default position
+            % NOTE: NEED TO SKEW END EFFECTOR FOR CAMERA TO HELP WITH VISUAL SERVOIING!!!!!
+            self.defaultPosition = deg2rad([0,-45,-90,-45,0,135]);
             self.MoveJoints(self.defaultPosition);
         end
 
@@ -60,8 +63,12 @@ classdef LaserBot < UR3
                 u = [principalPoint(1)-sizeInImage/2, principalPoint(1)+sizeInImage/2];
                 v = [principalPoint(2)-sizeInImage/2, principalPoint(2)+sizeInImage/2];
                 self.cameraTargets = [u(1) u(2) u(2) u(1); v(1) v(1) v(2) v(2)];
-%                 self.cameraModel.plot(self.cameraTargets, '*');
-%                 self.cameraModel.hold;
+                if isempty(self.ur_cam)
+                    % If simulating camera, plot the target points in the
+                    % camera frame
+                    self.cameraModel.plot(self.cameraTargets, '*');
+                    self.cameraModel.hold;
+                end
             end
         end
 
@@ -81,7 +88,7 @@ classdef LaserBot < UR3
             self.targetHit = false;
             self.GetImage();
             deltaT = 1/self.cameraFps;
-            lambda = 0.7;
+            lambda = 0.3;
             i = 1;
             while ~self.targetHit
                 if ~isempty(self.cameraImage)
@@ -137,16 +144,16 @@ classdef LaserBot < UR3
                         uv = newBoxPolygon(1:4,:)';
     
                         e = [self.cameraTargets(:,1)-uv(:,1);self.cameraTargets(:,2)-uv(:,2);self.cameraTargets(:,3)-uv(:,3);self.cameraTargets(:,4)-uv(:,4)];
-                    
+                
                         J = self.cameraModel.visjac_p(uv, self.targetDepth);
                         v = lambda*pinv(J)*e;
                     
                         %compute robot's Jacobian and inverse
-                        J2 = self.model.jacob0(self.model.getpos);
+                        J2 = self.model.jacobn(self.model.getpos);
                         Jinv = pinv(J2);
                         % get joint velocities
                         qv = Jinv*v;
-
+    
                         figure(1);
                         nq = self.model.getpos()' + (1/self.cameraFps)*qv;
                         self.model.animate(nq');
@@ -184,8 +191,8 @@ classdef LaserBot < UR3
                             break
                         else
                             figure(2);
-                            line(targetBox(1,:), targetBox(2,:),'Color','r','LineWidth',5)
-                            pause(1);
+                            line(targetBox(1,:), targetBox(2,:),'Color','r','LineWidth',5);
+%                             pause(0.5);
                         end
 
                     catch
@@ -203,12 +210,17 @@ classdef LaserBot < UR3
                 
                     J = self.cameraModel.visjac_p(uv, self.targetDepth);
                     v = lambda*pinv(J)*e;
-                    v = v*deltaT;
                 
-                    nT = self.model.fkine(self.model.getpos())*transl(v(1),v(2),v(3))*trotx(v(4))*troty(v(5))*trotz(v(6));
-                    nq = self.model.ikcon(nT,self.model.getpos());
-                    self.model.animate(nq);
-                
+                    %compute robot's Jacobian and inverse
+                    J2 = self.model.jacobn(self.model.getpos);
+                    Jinv = pinv(J2);
+                    % get joint velocities
+                    qv = Jinv*v;
+
+                    figure(1);
+                    nq = self.model.getpos()' + (1/self.cameraFps)*qv;
+                    self.model.animate(nq');
+            
                     Tc0 = self.model.fkine(self.model.getpos());
                     self.cameraModel.T = Tc0;
                 

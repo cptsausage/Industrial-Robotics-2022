@@ -14,7 +14,7 @@ classdef UR3 < handle
         workspace = [-0.5 0.5 -0.3 1.3 -0.03 1];
 
         % Default starting position for UR3
-        defaultPosition = deg2rad([0,-45,-90,-45,0,90]);
+        defaultPosition = deg2rad([0,-45,-90,-45,0,0]);
 
         % Nice starting pose before performing RMRC in cartesian plane
         startT = transl(0.4,0,0.5)*troty(pi/2);
@@ -24,8 +24,8 @@ classdef UR3 < handle
         % CHANGE ONCE USB CAM SPECS ARE FOUND
         ur_cam;                                 % Property for webcam
         cameraModel = CentralCamera(...
-                'focal', 0.08,...
-                'pixel', 10e-5,...
+                'focal', 0.001,...
+                'pixel', 2e-6,...
                 'resolution', [640 480],...
                 'centre', [320 240], ...
                 'name', 'C922 Pro Stream Webcam');
@@ -203,7 +203,7 @@ classdef UR3 < handle
         function MoveJoints (self, q)
             % MoveJoints - For joint interpolation movement
             deltaT = 1/self.cameraFps;
-            steps = 10;
+            steps = 100;
             qMatrix = jtraj(self.model.getpos(),q,steps);
             for i = 1:steps
                 for j = 1:self.model.n                                                             % Loop through joints 1 to 6
