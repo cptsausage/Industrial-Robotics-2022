@@ -22,7 +22,7 @@
         function self = RoboTargeterSimulation()
             %RoboTargeterSimulation Initialisation of class object
             %   Creation of LaserBot and TargetBot objects
-            self.workspace = [-0.6 0.6 0 1.4 -0.3 1]
+            self.workspace = [-0.6 0.6 0 1.4 -0.3 1];
             
             surf([0.6, 0.6; -0.6, -0.6],[1.4, -0.2; 1.4, -0.2],[0.01,0.01;0.01,0.01],'CData',imread('concrete.jpg'),'FaceColor','texturemap');
          

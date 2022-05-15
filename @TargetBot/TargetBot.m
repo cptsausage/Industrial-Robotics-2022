@@ -75,7 +75,7 @@ classdef TargetBot < UR3
             x = xRange(1) + (xRange(2)-xRange(1))*rand(1,1);
             y = yRange(1) + (yRange(2)-yRange(1))*rand(1,1);
             z = zRange(1) + (zRange(2)-zRange(1))*rand(1,1);
-            self.targetCorners = mkgrid(2, 0.1, 'T', transl(x,y,z)*trotx(pi/2)*trotz(-pi/2));
+            self.targetCorners = mkgrid(2, 0.1, 'T', transl(x,y-0.2,z)*trotx(pi/2)*trotz(-pi/2));
             q = self.model.ikcon(transl(x,y,z)*trotx(pi/2), self.model.getpos());
             self.MoveJoints(q);
         end

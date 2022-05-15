@@ -140,11 +140,16 @@ classdef UR3 < handle
             if ~isempty(self.targetCorners)
                 T = self.model.fkine(self.model.getpos());
                 T = T(1:3,4)';
-                self.targetCorners = mkgrid(2, 0.1, 'T', transl(T(1),T(2),T(3))*trotx(pi/2)*trotz(-pi/2)); 
+                self.targetCorners = mkgrid(2, 0.1, 'T', transl(T(1),T(2)-0.01,T(3))*trotx(pi/2)*trotz(-pi/2)); % Target has slight offset to avoid clipping into ur3 model
                 delete(self.targetPlot);
                 hold on;
-                plot = [self.targetCorners, self.targetCorners(:,1)];
-                self.targetPlot = line(plot(1,:), plot(2,:), plot(3,:),'Color','g','LineWidth',5);
+                plot = [self.targetCorners(1,1),self.targetCorners(1,2);...
+                    self.targetCorners(1,4), self.targetCorners(1,3);...
+                    self.targetCorners(2,1), self.targetCorners(2,2);...
+                    self.targetCorners(2,4), self.targetCorners(2,3);...
+                    self.targetCorners(3,1), self.targetCorners(3,2);...
+                    self.targetCorners(3,4), self.targetCorners(3,3)];
+                self.targetPlot = surf(plot(1:2,:), plot(3:4,:), plot(5:6,:),'CData',imread('Target.png'),'FaceColor','texturemap');
             end
         end
 
