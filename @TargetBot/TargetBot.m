@@ -8,18 +8,17 @@ classdef TargetBot < UR3
         % Notes: do we nee a camera? Or should we just make a gui to move
         % it manually / set movement?
         % Camera Parameters
-        
-        % Target
-        targetCorners;
-        targetPlot;
 
         % Target Parameters
         targetSize = 0.2; %Placeholder (metres)
 
-        % Target Hit, if hit == 1, the target has been hit and will move to
+        % Target Hit, if targetHit == 1, the target has been hit and will move to
         % new location
 
-        hit = 0;
+        targetHit;
+
+        % Simulation-fed laser beam for line-plane intersection check
+        laserPoints;
     end
 
     methods
@@ -34,22 +33,42 @@ classdef TargetBot < UR3
             self.MoveJoints(self.defaultPosition);
         end
 
-        function MoveTarget(self)
-            % MoveTarget - Moving the target to a new location
-            % Use main class UR3 MoveBot for main movement/singularity/optimisation and
-            % collision detection
-        end
-
-        function CheckIfHit(self)
+        function hit = CheckIfHit(self)
             % CheckIfHit - function that loops and steps into 'MoveTarget' 
             % once TargetHit == 1 
             % Need to use some sort of indication, either through camera or
             % other sensor
+
+            self.targetHit = 0;
+            hit = 0;
+            
+            % Calculate normal to target plane for line plane intersection
+            A = self.targetCorners(:,2)-self.targetCorners(:,1);
+            B = self.targetCorners(:,3)-self.targetCorners(:,1);
+            planeNormal = cross(A, B);
+
+            [intersectionPoint,check] = LinePlaneIntersection(planeNormal,self.targetCorners(:,1),self.laserPoints(:,1),self.laserPoints(:,2));
+            if check == 1
+                % Check if point lies within target bounds, ignore y
+                % because simulation target sits on plane
+                xv = self.targetCorners(1,:);
+                xz = self.targetCorners(3,:);
+                if inpolygon(intersectionPoint(1), intersectionPoint(3), xv, xz)
+                    hit = 1;
+                    self.targetHit = 1;
+                    display('TARGETBOT: Target hit!')
+                else
+                    display('TARGETBOT: Target not hit!')
+                end
+            else
+                display('TARGETBOT: Target not hit!')
+            end
         end
 
         function SetRandomTarget(self)
             % SetTarget - Set simulated target and target bot to random position within
             % set bounds
+            display('TARGETBOT: Moving target...')
             xRange = [-0.2 0.2];
             yRange = [0.7 0.8];
             zRange = [0.4 0.6];
@@ -59,17 +78,7 @@ classdef TargetBot < UR3
             self.targetCorners = mkgrid(2, 0.1, 'T', transl(x,y,z)*trotx(pi/2)*trotz(-pi/2));
             q = self.model.ikcon(transl(x,y,z)*trotx(pi/2), self.model.getpos());
             self.MoveJoints(q);
-            self.PlotTarget;
         end
-
-        function PlotTarget(self)
-            delete(self.targetPlot);
-            hold on;
-            plot = [self.targetCorners, self.targetCorners(:,1)];
-            self.targetPlot = line(plot(1,:), plot(2,:), plot(3,:),'Color','g','LineWidth',5);
-        end
-% MIGHT SPLIT 'PlotTargetBot' INTO 'MoveTarget' AND 'MoveBot' IN UR3 MAIN
-% CLASS
         
         function PlotTargetBot(self,pos)
             %PlotTargetBot - TargetBot Plotting for simulation
@@ -85,16 +94,5 @@ classdef TargetBot < UR3
        
         end
 
-% MOVING 'NearSingularityM' TO UR3 MAIN CLASS TO BE INHERITED BY BOTH BOTS
-
-%         function NearSingularityM = CheckSingularity(self,q)
-%             J = self.ur3.model.jacob(q);
-%             m = sqrt(det(J*J))
-%             if(m > 0.1)
-%                 NearSingularityM = 1;
-%             else
-%                 NearSingularityM = 0;
-%             end
-%         end
     end
 end

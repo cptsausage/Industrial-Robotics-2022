@@ -32,6 +32,10 @@ classdef UR3 < handle
         cameraOffset = transl(0,0,0); % camera offset from end-effector
         cameraFps = 25; 
 
+        % Target plot for target on ur3
+        targetCorners;
+        targetPlot;
+
         % Boolean to communicate to UR3 through ROS
         ROSOn = false;
 
@@ -130,6 +134,20 @@ classdef UR3 < handle
 
         end
 
+        function PlotTarget(self)
+            % PlotTarget - Plots simulated target square to UR3 end
+            % effector
+            if ~isempty(self.targetCorners)
+                T = self.model.fkine(self.model.getpos());
+                T = T(1:3,4)';
+                self.targetCorners = mkgrid(2, 0.1, 'T', transl(T(1),T(2),T(3))*trotx(pi/2)*trotz(-pi/2)); 
+                delete(self.targetPlot);
+                hold on;
+                plot = [self.targetCorners, self.targetCorners(:,1)];
+                self.targetPlot = line(plot(1,:), plot(2,:), plot(3,:),'Color','g','LineWidth',5);
+            end
+        end
+
         function ROSInit(self)
             
             jointStateSubscriber = rossubscriber('joint_states','sensor_msgs/JointState');
@@ -220,6 +238,9 @@ classdef UR3 < handle
                     self.cameraModel.T = self.model.fkine(self.model.getpos())*self.cameraOffset; % Update camera position
                     self.cameraModel.plot_camera();
                 end
+                if ~isempty(self.targetCorners)
+                    self.PlotTarget();
+                end
 %                 self.ROSOn
                 if self.ROSOn == 1 
                     self.ROSSendGoal(qMatrix(i,:));
@@ -308,7 +329,8 @@ classdef UR3 < handle
                 angleError(:,i) = deltaTheta;                                           % For plotting
 
                 self.model.animate(qMatrix(i,:));
-                self.PlotCamera;
+                self.targetPlot();
+                self.PlotCamera();
                 path_h = plot3(truePos(1,:),truePos(2,:),truePos(3,:),'r.','LineWidth',1);
                 pause(deltaT);
             end

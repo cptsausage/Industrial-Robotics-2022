@@ -10,6 +10,7 @@ classdef LaserBot < UR3
         laserModel = 'Laser Model Here';
         laserRange = 3; %Placeholder (metres)
         laserOffset = zeros(4,4); % laser offset from end-effector
+        laserPoints; % Points of laser beam to be passed through simulation
 
         targetPlots; % Simulation/Camera-fed target locations for 'GetImage'
         
@@ -23,7 +24,7 @@ classdef LaserBot < UR3
         cameraTargets;
         laserObject;
         % Target data
-        targetHit; % Binary property to mark if the target has been hit
+        targetAligned; % Binary property to mark if the target has been aligned
     end
 
     methods
@@ -85,12 +86,13 @@ classdef LaserBot < UR3
 
         function FindTarget(self)
             % FindTarget - Implements visual servoing to determine location of target from image and aim
-            self.targetHit = false;
+            self.targetAligned = false;
             self.GetImage();
             deltaT = 1/self.cameraFps;
             lambda = 0.3;
             i = 1;
-            while ~self.targetHit
+            display('LASERBOT: Beginning search...')
+            while ~self.targetAligned
                 if ~isempty(self.cameraImage)
                     % If the camera is sending images, perform real visual
                     % servoing
@@ -174,20 +176,20 @@ classdef LaserBot < UR3
                             figure(2);
                             line(targetBox(1,:), targetBox(2,:),'Color','g','LineWidth',5)
                             
-                            display('Target reached!');
+                            display('LASERBOT: Target aligned!');
                         
                             % FIRE THE LASERS!!!
                             figure(1);
                             laserStart = self.model.fkine(self.model.getpos());
                             laserEnd = laserStart*transl(0,0,self.laserRange);
-                            laserPoints = [laserStart(1:3,4), laserEnd(1:3,4)];
-                            laserPlot = line(laserPoints(1,:), laserPoints(2,:), laserPoints(3,:), 'Color', 'r', 'LineWidth', 5);
+                            self.laserPoints = [laserStart(1:3,4), laserEnd(1:3,4)];
+                            laserPlot = line(self.laserPoints(1,:), self.laserPoints(2,:), self.laserPoints(3,:), 'Color', 'r', 'LineWidth', 5);
                             pause(1);
                             delete(laserPlot);
                             
-                            self.targetHit = true;
+                            self.targetAligned = true;
                         elseif i >= 150
-                            display('Target not reached!');
+                            display('LASERBOT: Target not aligned within step limit!');
                             break
                         else
                             figure(2);
@@ -240,12 +242,12 @@ classdef LaserBot < UR3
                         % FIRE THE LASERS!!!
                         laserStart = self.model.fkine(self.model.getpos());
                         laserEnd = laserStart*transl(0,0,self.laserRange);
-                        laserPoints = [laserStart(1:3,4), laserEnd(1:3,4)];
-                        laserPlot = line(laserPoints(1,:), laserPoints(2,:), laserPoints(3,:), 'Color', 'r', 'LineWidth', 5);
+                        self.laserPoints = [laserStart(1:3,4), laserEnd(1:3,4)];
+                        laserPlot = line(self.laserPoints(1,:), self.laserPoints(2,:), self.laserPoints(3,:), 'Color', 'r', 'LineWidth', 5);
                         pause(1);
                         delete(laserPlot);
                         
-                        self.targetHit = true;
+                        self.targetAligned = true;
                     elseif i >= 150
                         display('Target not reached!');
                         break

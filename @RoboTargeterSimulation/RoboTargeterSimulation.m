@@ -51,17 +51,16 @@
     
                 self.laserBot.SetCamera();
     
-                % Right camera to avoid point confusion
-    %             twistWristQ = self.laserBot.defaultPosition + deg2rad([0,0,0,0,0,45]);
-    %             self.laserBot.MoveJoints(twistWristQ);
-    
                 self.laserBot.FindTarget();
 
-                if self.laserBot.targetHit
-                    display(['Round ', num2str(round),' result: Target hit!'])
-                    hits = hits + 1;
-                else
-                    display(['Round ', num2str(round),' result: Target not hit!'])
+                if self.laserBot.targetAligned
+                    % Pass through the laser points to check intersection
+                    % with target
+                    display('LASERBOT: Target Aligned...')
+                    self.targetBot.laserPoints = self.laserBot.laserPoints;
+                    if self.targetBot.CheckIfHit
+                        hits = hits + 1;
+                    end
                 end
             
             end
