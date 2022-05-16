@@ -30,7 +30,7 @@ classdef UR3 < handle
                 'centre', [320 240], ...
                 'name', 'C922 Pro Stream Webcam');
         cameraOffset = transl(0,0,0); % camera offset from end-effector
-        cameraFps = 25; 
+        cameraFps = 60; 
 
         % Target plot for target on ur3
         targetCorners;
@@ -226,6 +226,10 @@ classdef UR3 < handle
             steps = 100;
             qMatrix = jtraj(self.model.getpos(),q,steps);
             for i = 1:steps
+                if self.CheckCollisions(qMatrix(i,:))
+                    display('WARNING, COLLISION DETECTED FROM JOINT INTERPOLATION MOVEMENT. STOPPING MOVEMENT.')
+                    return
+                end
                 for j = 1:self.model.n                                                             % Loop through joints 1 to 6
                     if qMatrix(i,j) < self.model.qlim(j,1)                     % If next joint angle is lower than joint limit...
                         display(['Reaching joint ' num2str(j) ' limit, stopping...'])
@@ -236,13 +240,8 @@ classdef UR3 < handle
                     end
                 end
                 self.model.animate(qMatrix(i,:));
-                if self.cameraOn == true
-                    self.cameraModel.T = self.model.fkine(self.model.getpos())*self.cameraOffset; % Update camera position
-                    self.cameraModel.plot_camera();
-                end
-                if ~isempty(self.targetCorners)
-                    self.PlotTarget();
-                end
+                self.PlotCamera();
+                self.PlotTarget();
                 pause(deltaT);
 
             end
@@ -324,6 +323,11 @@ classdef UR3 < handle
                     end
                 end
                 qMatrix(i+1,:) = qMatrix(i,:) + deltaT*qdot(i,:);                         	% Update next joint state based on joint velocities
+                
+                if self.CheckCollisions(qMatrix(i+1,:))                                   % Check for collision in next joint step
+                    display('WARNING, COLLISION DETECTED FROM RMRC MOVE BOT. STOPPING MOVEMENT.')
+                    return
+                end
                 truePos(:,i) = T(1:3,4);
                 positionError(:,i) = x(:,i+1) - T(1:3,4);                               % For plotting
                 angleError(:,i) = deltaTheta;                                           % For plotting
@@ -331,6 +335,7 @@ classdef UR3 < handle
                 self.model.animate(qMatrix(i,:));
                 self.targetPlot();
                 self.PlotCamera();
+                self.ROSSendGoal(qMatrix(i,:));
                 path_h = plot3(truePos(1,:),truePos(2,:),truePos(3,:),'r.','LineWidth',1);
                 pause(deltaT);
             end
@@ -342,6 +347,84 @@ classdef UR3 < handle
             if self.analysis == true
                 self.RMRCResults(qMatrix, qdot, positionError, angleError, m, epsilon);
             end
+
+        end
+
+        function JointSet(self)
+            % JointSet - Function called during event where GUI joint values are updated
+
+            % Set all joints from current values in GUI
+            q(1) = 0;
+            q(2) = 0;
+            q(3) = 0;
+            q(4) = 0;
+            q(5) = 0;
+            q(6) = 0;
+
+            if self.CheckCollisions(q)
+                display('WARNING, COLLISION DETECTED FROM JOINT MANIPULATION.')
+                return
+            end
+
+            for j = 1:self.model.n                                                             % Loop through joints 1 to 6
+                if q(j) < self.model.qlim(j,1)                     % If next joint angle is lower than joint limit...
+                    display(['Reaching joint ' num2str(j) ' limit'])
+                    return
+                elseif q(j) > self.model.qlim(j,2)                 % If next joint angle is greater than joint limit ...
+                    display(['Reaching joint ' num2str(j) ' limit'])
+                    return
+                end
+            end
+            
+            self.model.animate(q);
+            self.PlotCamera();
+            self.PlotTarget();
+            self.ROSSendGoal(q);
+
+        end
+
+        function BotSet(self)
+            % BotSet - Function called during event where GUI cartesian
+            % movment buttons are pressed
+
+            % Get new translation from button press
+            x = 0;
+            y = 0;
+            z = 0;
+            roll = 0;
+            pitch = 0;
+            yaw = 0;
+
+            % Determine next pose
+            T = transl(x,y,z)*trotx(roll)*troty(pitch)*trotz(yaw);
+            T = self.model.fkine(self.model.getpos())*T;
+
+            q = self.model.ikcon(T, self.model.getpos());
+
+            if self.CheckCollisions(q)
+                display('WARNING, COLLISION DETECTED FROM JOINT MANIPULATION.')
+                return
+            end
+            
+            for j = 1:self.model.n                                                             % Loop through joints 1 to 6
+                if q(j) < self.model.qlim(j,1)                     % If next joint angle is lower than joint limit...
+                    display(['Reaching joint ' num2str(j) ' limit'])
+                    return
+                elseif q(j) > self.model.qlim(j,2)                 % If next joint angle is greater than joint limit ...
+                    display(['Reaching joint ' num2str(j) ' limit'])
+                    return
+                end
+            end
+
+            if CheckSingularity(q)
+                display('ROBOT APPROACHING SINGULARITY, STOPPING MOVEMENT.')
+                return
+            end
+
+            self.model.animate(q);
+            self.PlotCamera();
+            self.PlotTarget();
+            self.ROSSendGoal(q);
 
         end
 
@@ -398,10 +481,11 @@ classdef UR3 < handle
 
         function NearSingularityM = CheckSingularity(self,q)
             % NearSingularityM - Checks if the robot is close to a
-            % singularity
+            % singularity, and returns a boolean
             J = self.model.jacob(q);
-            m = sqrt(det(J*J))
-            if(m > 0.1)
+            m = sqrt(det(J*J));
+            epsilon = 0.1;  
+            if(m < epsilon)  % Check if manipulability is below a certain threshold
                 NearSingularityM = 1;
             else
                 NearSingularityM = 0;

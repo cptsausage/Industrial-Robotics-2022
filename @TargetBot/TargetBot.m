@@ -80,20 +80,6 @@ classdef TargetBot < UR3
             q = self.model.ikcon(transl(x,y,z)*trotx(pi/2), self.model.getpos());
             self.MoveJoints(q);
         end
-        
-        function PlotTargetBot(self,pos)
-            %PlotTargetBot - TargetBot Plotting for simulation
-            if  hit == 1
-            newq = self.ur3.model.ikine(pos);
-            qMatrix = jtraj(self.ur3.model.getpos(),newq,self.steps);
-            for i = 1:self.steps
-                self.ur3.model.animate(qMatrix(i,:));
-            end
-            hit = 0;
-            end
-        
-       
-        end
-
     end
+
 end

@@ -47,11 +47,6 @@ classdef LaserBot < UR3
             self.MoveJoints(self.defaultPosition);
         end
 
-        function PlotLaserBot(self)
-            %PlotLaserBot - LaserBot Plotting for simulation
-            % Need to overwrite UR3 model plot to include laser/camera in model
-        end
-
         function SetCamera(self)
             % SetCamera - Sets target points in image plane based on target
             % size
@@ -316,20 +311,6 @@ classdef LaserBot < UR3
             end
             self.cameraModel.clf();
             
-        end
-
-        function desiredPose = DetermineDesiredPose(self,targetLocation)
-            % DetermineDesiredPose - Determine desired pose for laser
-            % targeting
-
-            
-            return
-                
-
-        end
-
-        function CheckIfHit(self)
-            % CheckIfHit - Determine if target has been hit
         end
 
         function ReturnLaser(self,q)
