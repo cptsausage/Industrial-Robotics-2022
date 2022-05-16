@@ -86,7 +86,7 @@ classdef LaserBot < UR3
             self.targetAligned = false;
             self.GetImage();
             deltaT = 1/self.cameraFps;
-            lambda = 0.3;
+            lambda = 0.7;
             i = 1;
             display('LASERBOT: Beginning search...')
             while ~self.targetAligned
@@ -179,11 +179,33 @@ classdef LaserBot < UR3
                         Jinv = pinv(J2);
                         % get joint velocities
                         qv = Jinv*v;
-    
-                        figure(1);
-                        hold on
+
+                        %Maximum angular velocity cannot exceed 180 degrees/s
+                        ind=find(qv>pi);
+                        if ~isempty(ind)
+                            qv(ind)=pi;
+                        end
+                        ind=find(qv<-pi);
+                        if ~isempty(ind)
+                            qv(ind)=-pi;
+                        end
+
+
                         deltaT = 1/4;
                         nq = self.model.getpos()' + deltaT*qv; % Alter deltaT to account for ros message sending
+                        
+                        if self.CheckSingularity(nq)
+                            display('LASERBOT: Approaching singularity, target cannot currently be reached...')
+                            return
+                        end
+
+                        if self.CheckCollisions
+                            display('LASERBOT: Collision detected within next step, stopping...')
+                            return
+                        end
+
+                        figure(1);
+                        hold on
                         self.model.animate(nq');
                     
                         Tc0 = self.model.fkine(self.model.getpos());
@@ -251,13 +273,21 @@ classdef LaserBot < UR3
                         J = self.cameraModel.visjac_p(uv, self.targetDepth);
                         v = lambda*pinv(J)*e;
                         v = v*deltaT;
-
-                        % NEED TO ADD SINGULARIY CHECKS
                     
                         % Move away from the sign, -z to retreat
                         nT = self.model.fkine(self.model.getpos())*transl(v(1),v(2),-v(3))*trotx(v(4))*troty(v(5))*trotz(v(6));
                         nq = self.model.ikcon(nT,self.model.getpos());
-    
+
+                        if self.CheckSingularity(nq)
+                            display('LASERBOT: Approaching singularity, staying at current distance from hazard...')
+                            return
+                        end
+
+                        if self.CheckCollisions
+                            display('LASERBOT: Collision detected within next step, stopping...')
+                            return
+                        end
+
                         figure(1);
                         self.model.animate(nq);
                 
@@ -278,9 +308,30 @@ classdef LaserBot < UR3
                         Jinv = pinv(J2);
                         % get joint velocities
                         qv = Jinv*v;
-    
-                        figure(1);
+
+                        %Maximum angular velocity cannot exceed 180 degrees/s
+                        ind=find(qv>pi);
+                        if ~isempty(ind)
+                            qv(ind)=pi;
+                        end
+                        ind=find(qv<-pi);
+                        if ~isempty(ind)
+                            qv(ind)=-pi;
+                        end
+
                         nq = self.model.getpos()' + deltaT*qv; % Alter deltaT to account for ros message sending
+
+                        if self.CheckSingularity(nq)
+                            display('LASERBOT: Approaching singularity, target cannot currently be reached...')
+                            return
+                        end
+
+                        if self.CheckCollisions
+                            display('LASERBOT: Collision detected within next step, stopping...')
+                            return
+                        end
+
+                        figure(1);
                         self.model.animate(nq');
                 
                         Tc0 = self.model.fkine(self.model.getpos());

@@ -482,10 +482,10 @@ classdef UR3 < handle
         function NearSingularityM = CheckSingularity(self,q)
             % NearSingularityM - Checks if the robot is close to a
             % singularity, and returns a boolean
-            J = self.model.jacob(q);
+            J = self.model.jacob0(q);
             m = sqrt(det(J*J));
             epsilon = 0.1;  
-            if(m < epsilon)  % Check if manipulability is below a certain threshold
+            if(m > epsilon)  % Check if manipulability is below a certain threshold
                 NearSingularityM = 1;
             else
                 NearSingularityM = 0;
