@@ -173,15 +173,14 @@ classdef UR3 < handle
                 self.model.animate(startq);
             end
 
-            self.MoveJoints(self.defaultPosition);     
+            self.MoveJoints(self.defaultPosition);
              
         end
 
         function ROSSendGoal(self, q)
-            display('Test 1')
             % Check if ROS communication is enabled
             if self.ROSOn == true
-                display('Test 2')
+                display('ROS is on...')
                 % Establish Joint Names
                 jointStateSubscriber = rossubscriber('joint_states','sensor_msgs/JointState');
                 pause(1);
@@ -197,7 +196,7 @@ classdef UR3 < handle
                 goal.Trajectory.Header.Stamp = rostime('Now','system');
                 goal.GoalTimeTolerance = rosduration(0.05);
                 bufferSeconds = 1; % This allows for the time taken to send the message. If the network is fast, this could be reduced.
-                durationSeconds = 3; % This is how many seconds the movement will take
+                durationSeconds = 4; % This is how many seconds the movement will take
 
                 % Get current joint state
                 startJointSend = rosmessage('trajectory_msgs/JointTrajectoryPoint');
@@ -215,11 +214,9 @@ classdef UR3 < handle
 
                 % Send goal to UR3
                 goal.Trajectory.Header.Stamp = jointStateSubscriber.LatestMessage.Header.Stamp + rosduration(bufferSeconds);
-%                 display('Waiting...')
-                pause(3);
+                waitForServer(client);
                 sendGoal(client,goal);
-%                 display('Waiting...')
-                pause(3);
+                pause(durationSeconds+bufferSeconds*2);
             end
         end
 
@@ -246,13 +243,11 @@ classdef UR3 < handle
                 if ~isempty(self.targetCorners)
                     self.PlotTarget();
                 end
-%                 self.ROSOn
-                if self.ROSOn == 1 
-                    self.ROSSendGoal(qMatrix(i,:));
-                    display('Test 0')
-                end
                 pause(deltaT);
 
+            end
+            if self.ROSOn == 1 
+                self.ROSSendGoal(qMatrix(i,:));
             end
         end
 

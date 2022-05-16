@@ -20,7 +20,7 @@ classdef LaserBot < UR3
         % Desired positions of target corners in camera plane based on
         % real target size
         targetSize = 0.18 % 18x18 cm
-        targetDepth = 0.7; % Approximate distance between the target/laser
+        targetDepth = 0.6; % Approximate distance between the target/laser
         cameraTargets;
         laserObject;
         % Target data
@@ -41,7 +41,7 @@ classdef LaserBot < UR3
             
             % Move bot to default position
             % NOTE: NEED TO SKEW END EFFECTOR FOR CAMERA TO HELP WITH VISUAL SERVOIING!!!!!
-            self.defaultPosition = deg2rad([0,-45,-90,-45,0,135]);
+            self.defaultPosition = deg2rad([45,-45,-45,-90,-45,135]);
             self.MoveJoints(self.defaultPosition);
         end
 
@@ -137,7 +137,7 @@ classdef LaserBot < UR3
                         newBoxPolygon = transformPointsForward(tform, boxPolygon);
                         figure(2);
                         imshow(realImage);
-                        hold on;
+                        hold on
                         line(newBoxPolygon(:,1),newBoxPolygon(:,2),'Color','y','LineWidth',5);
                         hold off;
                         title('UR Camera View');
@@ -147,31 +147,7 @@ classdef LaserBot < UR3
     
                         e = [self.cameraTargets(:,1)-uv(:,1);self.cameraTargets(:,2)-uv(:,2);self.cameraTargets(:,3)-uv(:,3);self.cameraTargets(:,4)-uv(:,4)];
                 
-                        J = self.cameraModel.visjac_p(uv, self.targetDepth);
-                        v = lambda*pinv(J)*e;
-                    
-                        %compute robot's Jacobian and inverse
-                        J2 = self.model.jacobn(self.model.getpos);
-                        Jinv = pinv(J2);
-                        % get joint velocities
-                        qv = Jinv*v;
-    
-                        figure(1);
-                        nq = self.model.getpos()' + (1/self.cameraFps)*qv;
-                        self.model.animate(nq');
-                    
-                        Tc0 = self.model.fkine(self.model.getpos());
-                        self.cameraModel.T = Tc0;
-
-                        if self.ROSOn == 1 
-                            self.ROSSendGoal(nq);
-        %                     display('Test 0')
-                            pause(2); % For testing
-                        end
-        %                 display('Test -1')
-                        pause(deltaT);
                         targetBox = [self.cameraTargets, self.cameraTargets(:,1)];
-                        i = i+1;
                         if max(abs(e), [], 'all') < 20
                             figure(2);
                             line(targetBox(1,:), targetBox(2,:),'Color','g','LineWidth',5)
@@ -188,14 +164,77 @@ classdef LaserBot < UR3
                             delete(laserPlot);
                             
                             self.targetAligned = true;
+                            break
                         elseif i >= 150
                             display('LASERBOT: Target not aligned within step limit!');
                             break
                         else
                             figure(2);
                             line(targetBox(1,:), targetBox(2,:),'Color','r','LineWidth',5);
-%                             pause(0.5);
                         end
+
+                        J = self.cameraModel.visjac_p(uv, self.targetDepth);
+                        lambda = 0.8;                   % Increase gain for ros interaction
+                        v = lambda*pinv(J)*e;
+                    
+                        %compute robot's Jacobian and inverse
+                        J2 = self.model.jacobn(self.model.getpos);
+                        Jinv = pinv(J2);
+                        % get joint velocities
+                        qv = Jinv*v;
+    
+                        figure(1);
+                        hold on
+                        deltaT = 1/4;
+                        nq = self.model.getpos()' + deltaT*qv; % Alter deltaT to account for ros message sending
+                        self.model.animate(nq');
+                    
+                        Tc0 = self.model.fkine(self.model.getpos());
+                        self.cameraModel.T = Tc0;
+                        hold off
+
+                        if self.ROSOn == 1 
+                            display('ROS is on...')
+                            % Establish Joint Names
+                            jointStateSubscriber = rossubscriber('joint_states','sensor_msgs/JointState');
+                            pause(0.01);
+                            currentJointState_321456 = (jointStateSubscriber.LatestMessage.Position); % Note the default order of the joints is 3,2,1,4,5,6
+                            currentJointState_123456 = [currentJointState_321456(3:-1:1)',currentJointState_321456(4:6)'];
+            
+                            
+                            jointNames = {'shoulder_pan_joint','shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint'};
+                
+                            [client, goal] = rosactionclient('/scaled_pos_joint_traj_controller/follow_joint_trajectory');
+                            goal.Trajectory.JointNames = jointNames;
+                            goal.Trajectory.Header.Seq = 1;
+                            goal.Trajectory.Header.Stamp = rostime('Now','system');
+                            goal.GoalTimeTolerance = rosduration(0.05);
+                            bufferSeconds = 0.5; % This allows for the time taken to send the message. If the network is fast, this could be reduced.
+                            durationSeconds = 1; % This is how many seconds the movement will take
+            
+                            % Get current joint state
+                            startJointSend = rosmessage('trajectory_msgs/JointTrajectoryPoint');
+                            startJointSend.Positions = currentJointState_123456;
+                            startJointSend.TimeFromStart = rosduration(0);     
+                              
+                            % Get next/final joint state
+                            endJointSend = rosmessage('trajectory_msgs/JointTrajectoryPoint');
+                            endJointSend.Positions = nq';
+                            
+                            endJointSend.TimeFromStart = rosduration(durationSeconds);
+                            
+                            % Set goal
+                            goal.Trajectory.Points = [startJointSend; endJointSend];
+            
+                            % Send goal to UR3
+                            goal.Trajectory.Header.Stamp = jointStateSubscriber.LatestMessage.Header.Stamp + rosduration(bufferSeconds);
+                            waitForServer(client);
+                            sendGoal(client,goal);
+                            pause(durationSeconds + bufferSeconds);
+                        end
+                        
+                        pause(deltaT);
+                        i = i+1;
 
                     catch
                         % If not enough matching SIFT features are found,
@@ -220,7 +259,7 @@ classdef LaserBot < UR3
                     qv = Jinv*v;
 
                     figure(1);
-                    nq = self.model.getpos()' + (1/self.cameraFps)*qv;
+                    nq = self.model.getpos()' + deltaT*qv; % Alter deltaT to account for ros message sending
                     self.model.animate(nq');
             
                     Tc0 = self.model.fkine(self.model.getpos());
