@@ -19,6 +19,7 @@ classdef TargetBot < UR3
 
         % Simulation-fed laser beam for line-plane intersection check
         laserPoints;
+        
     end
 
     methods
@@ -29,7 +30,7 @@ classdef TargetBot < UR3
 
             self@UR3();
             self.name = 'TargetBot';
-            self.model.base = transl(0,1.6,0)*trotz(-pi);
+            self.model.base = transl(0,1,0)*trotz(-pi);
             self.MoveJoints(self.defaultPosition);
         end
 

@@ -13,6 +13,8 @@ classdef LaserBot < UR3
         laserPoints; % Points of laser beam to be passed through simulation
 
         targetPlots; % Simulation/Camera-fed target locations for 'GetImage'
+
+        hazardPlots; % Simulation-fed hazard location
         
         % Camera image
         cameraImage; % Property holding camera image 
@@ -20,7 +22,7 @@ classdef LaserBot < UR3
         % Desired positions of target corners in camera plane based on
         % real target size
         targetSize = 0.18 % 18x18 cm
-        targetDepth = 0.6; % Approximate distance between the target/laser
+        targetDepth = 0.8; % Approximate distance between the target/laser
         cameraTargets;
         laserObject;
         % Target data
@@ -245,34 +247,53 @@ classdef LaserBot < UR3
                 else
                     % Simulation plotting if camera is not set up, use
                     % virtual visual servoing
-                    uv = self.cameraModel.plot(self.targetPlots);
+                    if ~isempty(self.hazardPlots) % Prioritise moving away from hazard symbol in simulation
+                        display('LASERBOT: Hazard detected, prioritising hazard avoidance!')
+                        uv = self.cameraModel.plot(self.hazardPlots(:,1:4));
     
-                    e = [self.cameraTargets(:,1)-uv(:,1);self.cameraTargets(:,2)-uv(:,2);self.cameraTargets(:,3)-uv(:,3);self.cameraTargets(:,4)-uv(:,4)];
-                
-                    J = self.cameraModel.visjac_p(uv, self.targetDepth);
-                    v = lambda*pinv(J)*e;
-                
-                    %compute robot's Jacobian and inverse
-                    J2 = self.model.jacobn(self.model.getpos);
-                    Jinv = pinv(J2);
-                    % get joint velocities
-                    qv = Jinv*v;
+                        e = [uv(:,1)-self.cameraTargets(:,1);uv(:,2)-self.cameraTargets(:,2);uv(:,3)-self.cameraTargets(:,3);uv(:,4)-self.cameraTargets(:,4)];
+                    
+                        J = self.cameraModel.visjac_p(uv, self.targetDepth);
+                        v = lambda*pinv(J)*e;
+                        v = v*deltaT;
 
-                    figure(1);
-                    nq = self.model.getpos()' + deltaT*qv; % Alter deltaT to account for ros message sending
-                    self.model.animate(nq');
-            
-                    Tc0 = self.model.fkine(self.model.getpos());
-                    self.cameraModel.T = Tc0;
+                        % NEED TO ADD SINGULARIY CHECKS
+                    
+                        % Move away from the sign, -z to retreat
+                        nT = self.model.fkine(self.model.getpos())*transl(v(1),v(2),-v(3))*trotx(v(4))*troty(v(5))*trotz(v(6));
+                        nq = self.model.ikcon(nT,self.model.getpos());
+    
+                        figure(1);
+                        self.model.animate(nq);
                 
-                    self.cameraModel.plot_camera('Tcam',Tc0,'scale',0.05);
-    %                 display('Test -2')
-                    if self.ROSOn == 1 
-                        self.ROSSendGoal(nq);
-    %                     display('Test 0')
-                        pause(2); % For testing
+                        Tc0 = self.model.fkine(self.model.getpos());
+                        self.cameraModel.T = Tc0;
+                    
+                        self.cameraModel.plot_camera('Tcam',Tc0,'scale',0.05);
+                    else
+                        uv = self.cameraModel.plot(self.targetPlots);
+        
+                        e = [self.cameraTargets(:,1)-uv(:,1);self.cameraTargets(:,2)-uv(:,2);self.cameraTargets(:,3)-uv(:,3);self.cameraTargets(:,4)-uv(:,4)];
+                    
+                        J = self.cameraModel.visjac_p(uv, self.targetDepth);
+                        v = lambda*pinv(J)*e;
+                    
+                        %compute robot's Jacobian and inverse
+                        J2 = self.model.jacobn(self.model.getpos);
+                        Jinv = pinv(J2);
+                        % get joint velocities
+                        qv = Jinv*v;
+    
+                        figure(1);
+                        nq = self.model.getpos()' + deltaT*qv; % Alter deltaT to account for ros message sending
+                        self.model.animate(nq');
+                
+                        Tc0 = self.model.fkine(self.model.getpos());
+                        self.cameraModel.T = Tc0;
+                    
+                        self.cameraModel.plot_camera('Tcam',Tc0,'scale',0.05);
                     end
-    %                 display('Test -1')
+
                     pause(deltaT);
                     i = i+1;
                     if max(abs(e), [], 'all') < 20
