@@ -11,8 +11,7 @@ classdef UR3 < handle
         model;
 
         % Designated UR3 workspace for initial plot
-        workspace = [-0.5 0.5 -0.3 1.3 -0.03 1];
-%         workspace = [0 0 0 0 0 0];
+        workspace = [-2 2 -2 2 -0.8 2];
 
         % Default starting position for UR3
         defaultPosition = deg2rad([0,-45,-90,-45,0,0]);
