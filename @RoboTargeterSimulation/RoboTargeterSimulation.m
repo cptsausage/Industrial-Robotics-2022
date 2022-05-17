@@ -132,16 +132,18 @@
                 x-size/2, x+size/2, x+size/2, x-size/2, x-size/2;...
                 y, y, y, y, y;...
                 z+size/2, z+size/2, z-size/2, z-size/2, z+size/2];
-            self.hazard = surf([x-size/2, x+size/2; x-size/2, x+size/2,],...
+            self.laserBot.hazard = surf([x-size/2, x+size/2; x-size/2, x+size/2,],...
                 [y, y; y, y],...
                 [z+size/2, z+size/2; z-size/2, z-size/2],...
                 'CData',imread('hazardsign.jpg'),'FaceColor','texturemap');
             hold off
         end
 
+        
+
         function RemoveHazard(self,~)
             self.laserBot.hazardPlots = [];
-            delete(self.hazard);
+            delete(self.laserBot.hazard);
         end
 
         function STOP(self)

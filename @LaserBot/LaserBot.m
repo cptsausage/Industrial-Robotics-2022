@@ -15,6 +15,7 @@ classdef LaserBot < UR3
         targetPlots; % Simulation/Camera-fed target locations for 'GetImage'
 
         hazardPlots; % Simulation-fed hazard location
+        hazard;      % hazardous object
         
         % Camera image
         cameraImage; % Property holding camera image 
