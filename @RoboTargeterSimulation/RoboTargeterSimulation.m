@@ -23,7 +23,7 @@
             %RoboTargeterSimulation Initialisation of class object
             %   Creation of LaserBot and TargetBot objects
             close all;
-            set(0,'DefaultFigureWindowStyle','docked')
+            set(0,'DefaultFigureWindowStyle','normal')
 
             hold("on");
             
