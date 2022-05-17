@@ -4,20 +4,21 @@ classdef Workspace
     
     properties
         estopActive
+        laserBot
+        targetBot
     end
     
     methods
-        function obj = Workspace(inputArg1,inputArg2)
+        function obj = Workspace()
             %WORKSPACE Construct an instance of this class
             %   CONSTRUCTOR
             %   Load in all the models
-            obj.estopActive = inputArg1 + inputArg2;
+            close all;
+            set(0,'DefaultFigureWindowStyle','docked')
             
-            % Load in the environment
-            surf([0.6, 0.6; -0.6, -0.6],[1.4, -0.2; 1.4, -0.2],[0.01,0.01;0.01,0.01],'CData',imread('concrete.jpg'),'FaceColor','texturemap');
-            hold('on');
-            surf([-0.6,0.6;-0.6,0.6],[-0.2,-0.2;-0.2,-0.2],[1,1;0.01,0.01],[1,1;0.01,0.01],'CData',imread('TargetsImage.jpg'),'FaceColor','texturemap');
-            surf([-0.6,-0.6;-0.6,-0.6],[-0.2,1.4;-0.2,1.4],[1,1;0.01,0.01],'CData',imread('TargetsImage.jpg'),'FaceColor','texturemap');
+            obj.estopActive = false;
+
+            hold("on");
             
             % Load in the environment floors
             surf([-1.25,-1.25;1.25,1.25],[-1,1;-1,1],[0.01,0.01;0.01,0.01], ...
@@ -31,19 +32,20 @@ classdef Workspace
             
             % Load in the table model
             [f,v,data] = plyread('table.ply','tri');
-            
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-            
             tableMesh_h = trisurf(f,v(:,1),v(:,2), v(:,3)-0.04 ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
             
-            % E STOP
+            % Load in the safety features
             [f,v,data] = plyread('e-stop.ply','tri');
-            
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-            
             tableMesh_h = trisurf(f,v(:,1), v(:,2)-2, v(:,3)-0.35 ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
+
+            % Load in the robots
+            obj.laserBot = LaserBot();
+            hold("on");
+            obj.targetBot = TargetBot();
             
         end
         

@@ -13,6 +13,9 @@ classdef Workspace
             %WORKSPACE Construct an instance of this class
             %   CONSTRUCTOR
             %   Load in all the models
+            close all;
+            set(0,'DefaultFigureWindowStyle','docked')
+            
             obj.estopActive = false;
 
             hold("on");
@@ -25,7 +28,9 @@ classdef Workspace
 
             % Load in the environment walls
             surf([2,-2;2,-2],[-3,-3;-3,-3],[2.15,2.15;-0.65,-0.65], ...
-               'CData',imread('uts.jpg'),'FaceColor','texturemap');
+               'CData',imread('brick-wall.jpg'),'FaceColor','texturemap');
+            surf([1,-1;1,-1],[-2.9,-2.9;-2.9,-2.9],[1,1;0,0], ...
+               'CData',imread('TargetsImage.jpg'),'FaceColor','texturemap');
             
             % Load in the table model
             [f,v,data] = plyread('table.ply','tri');
@@ -36,7 +41,7 @@ classdef Workspace
             % Load in the safety features
             [f,v,data] = plyread('e-stop.ply','tri');
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-            tableMesh_h = trisurf(f,v(:,1), v(:,2)-2, v(:,3)-0.35 ...
+            tableMesh_h = trisurf(f,v(:,1), v(:,2)-0.9, v(:,3)+0.3 ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
 
             % Load in the robots
@@ -44,6 +49,7 @@ classdef Workspace
             hold("on");
             obj.targetBot = TargetBot();
             
+
         end
         
         function outputArg = method1(obj,inputArg)

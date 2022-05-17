@@ -35,7 +35,7 @@ classdef LaserBot < UR3
             %   Constructor calls base class
             self@UR3();
             self.name = 'LaserBot';
-            self.model.base = eye(4,4); % Set the position of the model
+            self.model.base = eye(4,4) * transl(-0.5, 0, 0)  * trotz(-90, 'deg'); % Set the position of the model
             
             % Set up camera
             self.cameraOn = true;

@@ -30,7 +30,7 @@ classdef TargetBot < UR3
 
             self@UR3();
             self.name = 'TargetBot';
-            self.model.base = transl(0,1,0)*trotz(-pi);
+            self.model.base = eye(4) * transl(0.5, 0, 0) * trotz(90, 'deg');
             self.MoveJoints(self.defaultPosition);
         end
 
