@@ -383,21 +383,26 @@ classdef UR3 < handle
 
         end
 
-        function BotSet(self)
+        function BotSet(self, ~, input)
             % BotSet - Function called during event where GUI cartesian
             % movment buttons are pressed
 
+            vLambda = 0.01; % Scaling cartesian movment
+            wLambda = pi/180; % Scaling angular movement
+            
             % Get new translation from button press
-            x = 0;
-            y = 0;
-            z = 0;
-            roll = 0;
-            pitch = 0;
-            yaw = 0;
+            x = input(1)*vLambda;
+            y = input(2)*vLambda;
+            z = input(3)*vLambda;
+            roll = input(4)*wLambda;
+            pitch = input(5)*wLambda;
+            yaw = input(6)*wLambda;
 
             % Determine next pose
-            T = transl(x,y,z)*trotx(roll)*troty(pitch)*trotz(yaw);
-            T = self.model.fkine(self.model.getpos())*T;
+            Txyz = transl(x,y,z);
+            Tr = trotx(roll)*troty(pitch)*trotz(yaw);
+            
+            T = Txyz*self.model.fkine(self.model.getpos())*Tr;
 
             q = self.model.ikcon(T, self.model.getpos());
 
@@ -416,7 +421,7 @@ classdef UR3 < handle
                 end
             end
 
-            if CheckSingularity(q)
+            if self.CheckSingularity(q)
                 display('ROBOT APPROACHING SINGULARITY, STOPPING MOVEMENT.')
                 return
             end
@@ -469,7 +474,7 @@ classdef UR3 < handle
 
         end
 
-        function CollisionDetected = CheckCollisions (self, q);
+        function CollisionDetected = CheckCollisions (self, q)
             % CheckCollisions - Takes the model and the next joint
             % positions q, constructs ellipsoid points centered around the joint
             % midpoints and checks intersections between ellipsoids and the
@@ -483,9 +488,9 @@ classdef UR3 < handle
             % NearSingularityM - Checks if the robot is close to a
             % singularity, and returns a boolean
             J = self.model.jacob0(q);
-            m = sqrt(det(J*J));
-            epsilon = 0.1;  
-            if(m > epsilon)  % Check if manipulability is below a certain threshold
+            m = sqrt(det(J*J'));
+            epsilon = 0.001;  
+            if(m < epsilon)  % Check if manipulability is below a certain threshold
                 NearSingularityM = 1;
             else
                 NearSingularityM = 0;
