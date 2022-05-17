@@ -14,6 +14,7 @@
         workspace;
         targetsHit = 0;
         time; % seconds
+        stop = 0; % Simulation stop
 
     end
 
@@ -138,9 +139,15 @@
             hold off
         end
 
-        function RemoveHazard(self)
+        function RemoveHazard(self,~)
             self.laserBot.hazardPlots = [];
             delete(self.hazard);
+        end
+
+        function STOP(self)
+            while self.stop == 1
+                pause(1);
+            end
         end
 
         function CalculateError(self)
