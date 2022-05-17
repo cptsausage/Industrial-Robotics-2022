@@ -10,9 +10,9 @@ laserBot.CameraInit();
 laserBot.SetCamera(); % To set cameraTargets for error calculation
 
 % Initialise ROS connection
-% rosshutdown;
-% rosinit('192.168.0.253'); % UTS Pi address
-% laserBot.ROSInit();
+rosshutdown;
+rosinit('192.168.0.253'); % UTS Pi address
+laserBot.ROSInit();
 
 laserBot.FindTarget();
 

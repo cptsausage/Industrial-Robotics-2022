@@ -30,7 +30,7 @@ classdef UR3 < handle
                 'centre', [320 240], ...
                 'name', 'C922 Pro Stream Webcam');
         cameraOffset = transl(0,0,0); % camera offset from end-effector
-        cameraFps = 25; 
+        cameraFps = 60; 
 
         % Target plot for target on ur3
         targetCorners;
@@ -173,15 +173,14 @@ classdef UR3 < handle
                 self.model.animate(startq);
             end
 
-            self.MoveJoints(self.defaultPosition);     
+            self.MoveJoints(self.defaultPosition);
              
         end
 
         function ROSSendGoal(self, q)
-            display('Test 1')
             % Check if ROS communication is enabled
             if self.ROSOn == true
-                display('Test 2')
+                display('ROS is on...')
                 % Establish Joint Names
                 jointStateSubscriber = rossubscriber('joint_states','sensor_msgs/JointState');
                 pause(1);
@@ -197,7 +196,7 @@ classdef UR3 < handle
                 goal.Trajectory.Header.Stamp = rostime('Now','system');
                 goal.GoalTimeTolerance = rosduration(0.05);
                 bufferSeconds = 1; % This allows for the time taken to send the message. If the network is fast, this could be reduced.
-                durationSeconds = 3; % This is how many seconds the movement will take
+                durationSeconds = 4; % This is how many seconds the movement will take
 
                 % Get current joint state
                 startJointSend = rosmessage('trajectory_msgs/JointTrajectoryPoint');
@@ -215,11 +214,9 @@ classdef UR3 < handle
 
                 % Send goal to UR3
                 goal.Trajectory.Header.Stamp = jointStateSubscriber.LatestMessage.Header.Stamp + rosduration(bufferSeconds);
-%                 display('Waiting...')
-                pause(3);
+                waitForServer(client);
                 sendGoal(client,goal);
-%                 display('Waiting...')
-                pause(3);
+                pause(durationSeconds+bufferSeconds*2);
             end
         end
 
@@ -229,6 +226,10 @@ classdef UR3 < handle
             steps = 100;
             qMatrix = jtraj(self.model.getpos(),q,steps);
             for i = 1:steps
+                if self.CheckCollisions(qMatrix(i,:))
+                    display('WARNING, COLLISION DETECTED FROM JOINT INTERPOLATION MOVEMENT. STOPPING MOVEMENT.')
+                    return
+                end
                 for j = 1:self.model.n                                                             % Loop through joints 1 to 6
                     if qMatrix(i,j) < self.model.qlim(j,1)                     % If next joint angle is lower than joint limit...
                         display(['Reaching joint ' num2str(j) ' limit, stopping...'])
@@ -239,20 +240,13 @@ classdef UR3 < handle
                     end
                 end
                 self.model.animate(qMatrix(i,:));
-                if self.cameraOn == true
-                    self.cameraModel.T = self.model.fkine(self.model.getpos())*self.cameraOffset; % Update camera position
-                    self.cameraModel.plot_camera();
-                end
-                if ~isempty(self.targetCorners)
-                    self.PlotTarget();
-                end
-%                 self.ROSOn
-                if self.ROSOn == 1 
-                    self.ROSSendGoal(qMatrix(i,:));
-                    display('Test 0')
-                end
+                self.PlotCamera();
+                self.PlotTarget();
                 pause(deltaT);
 
+            end
+            if self.ROSOn == 1 
+                self.ROSSendGoal(qMatrix(i,:));
             end
         end
 
@@ -329,6 +323,11 @@ classdef UR3 < handle
                     end
                 end
                 qMatrix(i+1,:) = qMatrix(i,:) + deltaT*qdot(i,:);                         	% Update next joint state based on joint velocities
+                
+                if self.CheckCollisions(qMatrix(i+1,:))                                   % Check for collision in next joint step
+                    display('WARNING, COLLISION DETECTED FROM RMRC MOVE BOT. STOPPING MOVEMENT.')
+                    return
+                end
                 truePos(:,i) = T(1:3,4);
                 positionError(:,i) = x(:,i+1) - T(1:3,4);                               % For plotting
                 angleError(:,i) = deltaTheta;                                           % For plotting
@@ -336,6 +335,7 @@ classdef UR3 < handle
                 self.model.animate(qMatrix(i,:));
                 self.targetPlot();
                 self.PlotCamera();
+                self.ROSSendGoal(qMatrix(i,:));
                 path_h = plot3(truePos(1,:),truePos(2,:),truePos(3,:),'r.','LineWidth',1);
                 pause(deltaT);
             end
@@ -347,6 +347,89 @@ classdef UR3 < handle
             if self.analysis == true
                 self.RMRCResults(qMatrix, qdot, positionError, angleError, m, epsilon);
             end
+
+        end
+
+        function JointSet(self)
+            % JointSet - Function called during event where GUI joint values are updated
+
+            % Set all joints from current values in GUI
+            q(1) = 0;
+            q(2) = 0;
+            q(3) = 0;
+            q(4) = 0;
+            q(5) = 0;
+            q(6) = 0;
+
+            if self.CheckCollisions(q)
+                display('WARNING, COLLISION DETECTED FROM JOINT MANIPULATION.')
+                return
+            end
+
+            for j = 1:self.model.n                                                             % Loop through joints 1 to 6
+                if q(j) < self.model.qlim(j,1)                     % If next joint angle is lower than joint limit...
+                    display(['Reaching joint ' num2str(j) ' limit'])
+                    return
+                elseif q(j) > self.model.qlim(j,2)                 % If next joint angle is greater than joint limit ...
+                    display(['Reaching joint ' num2str(j) ' limit'])
+                    return
+                end
+            end
+            
+            self.model.animate(q);
+            self.PlotCamera();
+            self.PlotTarget();
+            self.ROSSendGoal(q);
+
+        end
+
+        function BotSet(self, ~, input)
+            % BotSet - Function called during event where GUI cartesian
+            % movment buttons are pressed
+
+            vLambda = 0.01; % Scaling cartesian movment
+            wLambda = pi/180; % Scaling angular movement
+            
+            % Get new translation from button press
+            x = input(1)*vLambda;
+            y = input(2)*vLambda;
+            z = input(3)*vLambda;
+            roll = input(4)*wLambda;
+            pitch = input(5)*wLambda;
+            yaw = input(6)*wLambda;
+
+            % Determine next pose
+            Txyz = transl(x,y,z);
+            Tr = trotx(roll)*troty(pitch)*trotz(yaw);
+            
+            T = Txyz*self.model.fkine(self.model.getpos())*Tr;
+
+            q = self.model.ikcon(T, self.model.getpos());
+
+            if self.CheckCollisions(q)
+                display('WARNING, COLLISION DETECTED FROM JOINT MANIPULATION.')
+                return
+            end
+            
+            for j = 1:self.model.n                                                             % Loop through joints 1 to 6
+                if q(j) < self.model.qlim(j,1)                     % If next joint angle is lower than joint limit...
+                    display(['Reaching joint ' num2str(j) ' limit'])
+                    return
+                elseif q(j) > self.model.qlim(j,2)                 % If next joint angle is greater than joint limit ...
+                    display(['Reaching joint ' num2str(j) ' limit'])
+                    return
+                end
+            end
+
+            if self.CheckSingularity(q)
+                display('ROBOT APPROACHING SINGULARITY, STOPPING MOVEMENT.')
+                return
+            end
+
+            self.model.animate(q);
+            self.PlotCamera();
+            self.PlotTarget();
+            self.ROSSendGoal(q);
 
         end
 
@@ -391,7 +474,7 @@ classdef UR3 < handle
 
         end
 
-        function CollisionDetected = CheckCollisions (self, q);
+        function CollisionDetected = CheckCollisions (self, q)
             % CheckCollisions - Takes the model and the next joint
             % positions q, constructs ellipsoid points centered around the joint
             % midpoints and checks intersections between ellipsoids and the
@@ -403,10 +486,11 @@ classdef UR3 < handle
 
         function NearSingularityM = CheckSingularity(self,q)
             % NearSingularityM - Checks if the robot is close to a
-            % singularity
-            J = self.model.jacob(q);
-            m = sqrt(det(J*J))
-            if(m > 0.1)
+            % singularity, and returns a boolean
+            J = self.model.jacob0(q);
+            m = sqrt(det(J*J'));
+            epsilon = 0.001;  
+            if(m < epsilon)  % Check if manipulability is below a certain threshold
                 NearSingularityM = 1;
             else
                 NearSingularityM = 0;

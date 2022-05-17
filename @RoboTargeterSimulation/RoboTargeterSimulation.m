@@ -9,24 +9,22 @@
         laserBot;
         targetBot;
         laser;
+
         % Simulated workspace size and parameters
         workspace;
-        laserBotBase;
-        targetBotBase;
         targetsHit = 0;
         time; % seconds
 
     end
 
     methods
-        function self = RoboTargeterSimulation()
+        function self = RoboTargeterSimulation(~)
             %RoboTargeterSimulation Initialisation of class object
             %   Creation of LaserBot and TargetBot objects
             self.workspace = [-0.6 0.6 0 1.4 -0.3 1];
             
             surf([0.6, 0.6; -0.6, -0.6],[1.4, -0.2; 1.4, -0.2],[0.01,0.01;0.01,0.01],'CData',imread('concrete.jpg'),'FaceColor','texturemap');
-         
-            hold on
+            hold('on');
             surf([-0.6,0.6;-0.6,0.6],[-0.2,-0.2;-0.2,-0.2],[1,1;0.01,0.01],[1,1;0.01,0.01],'CData',imread('TargetsImage.jpg'),'FaceColor','texturemap');
             surf([-0.6,-0.6;-0.6,-0.6],[-0.2,1.4;-0.2,1.4],[1,1;0.01,0.01],'CData',imread('TargetsImage.jpg'),'FaceColor','texturemap');
             
@@ -76,7 +74,27 @@
 
         end
 
+        function hazard = CreateHazard(self)
+            % Change size and position here
+            size = 0.2;
+            x = -0.1;
+            y = 0.7;
+            z = 0.4;
+            self.laserBot.hazardPlots = [...
+                x-size/2, x+size/2, x+size/2, x-size/2, x-size/2;...
+                y, y, y, y, y;...
+                z+size/2, z+size/2, z-size/2, z-size/2, z+size/2];
+            hazard = surf(...
+                [x-size/2, x+size/2; x-size/2, x+size/2,],...
+                [y, y; y, y],...
+                [z+size/2, z+size/2; z-size/2, z-size/2],...
+                'CData',imread('hazardsign.jpg'),'FaceColor','texturemap');
+        end
 
+        function RemoveHazard(self, hazard)
+            delete(self.laserBot.hazardPlots)
+            delete(hazard)
+        end
 
         function CalculateError(self)
             %CalculateError - Calculate error/accuracy between target and
