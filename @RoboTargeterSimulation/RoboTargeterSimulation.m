@@ -10,6 +10,7 @@
         targetBot;
         laser;
         hazard;
+        dennis;
 
         % Simulated workspace size and parameters
         workspace;
@@ -49,29 +50,25 @@
             % Load in the safety features
             [f,v,data] = plyread('estop.ply','tri');
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-            tableMesh_h = trisurf(f,v(:,1)-0.65, v(:,2)-0.35, v(:,3) ...
-                ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
-            [f,v,data] = plyread('dennis.ply','tri');
-            vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-            tableMesh_h = trisurf(f,v(:,1), v(:,2)-1.3, v(:,3)-0.7 ...
+            estop_h = trisurf(f,v(:,1)-0.65, v(:,2)-0.35, v(:,3) ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
 
             % Load in the safety features (light poles)
             [f,v,data] = plyread('light_pole.ply','tri');
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-            tableMesh_h = trisurf(f,v(:,1)+1.1, v(:,2)+1.7, v(:,3)-0.75 ...
+            lightPole1_h = trisurf(f,v(:,1)+1.1, v(:,2)+1.7, v(:,3)-0.75 ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
             [f,v,data] = plyread('light_pole.ply','tri');
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-            tableMesh_h = trisurf(f,v(:,1)-1.1, v(:,2)+1.7, v(:,3)-0.75 ...
+            lightPole2_h = trisurf(f,v(:,1)-1.1, v(:,2)+1.7, v(:,3)-0.75 ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
             [f,v,data] = plyread('light_pole.ply','tri');
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-            tableMesh_h = trisurf(f,v(:,1)+1.1, v(:,2)-0.75, v(:,3)-0.75 ...
+            lightPole3_h = trisurf(f,v(:,1)+1.1, v(:,2)-0.75, v(:,3)-0.75 ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
             [f,v,data] = plyread('light_pole.ply','tri');
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-            tableMesh_h = trisurf(f,v(:,1)-1.1, v(:,2)-0.75, v(:,3)-0.75 ...
+            lightPole4_h = trisurf(f,v(:,1)-1.1, v(:,2)-0.75, v(:,3)-0.75 ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
             
             self.laserBot = LaserBot();
@@ -140,8 +137,6 @@
             hold off
         end
 
-        
-
         function RemoveHazard(self,~)
             self.laserBot.hazardPlots = [];
             delete(self.laserBot.hazard);
@@ -167,15 +162,7 @@
             y = 0.7;
             z = 0.4;
             % Obstacle corners
-            self.laserBot.obstaclePlots = ...
-                [-0.1 0.2 0;
-                -0.1 0.6 0;
-                -0.1 0.2 0.3;
-                -0.1 0.6 0.3;
-                0.3 0.2 0;
-                0.3 0.6 0;
-                0.3 0.2 0.3;
-                0.3 0.6 0.3];
+            % Spawn Cube
 
             % Spawn the obstacle model
             [f,v,data] = plyread('obstacle.ply','tri');
@@ -183,6 +170,27 @@
             self.laserBot.obstacle = trisurf(f,v(:,1),v(:,2)+0.5, v(:,3) ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','none','EdgeLighting','flat');
             hold off
+        end
+
+        function MoveDennis(self)
+            decision = round(rand());
+
+            if decision == 0
+                delete(self.dennis);
+
+                [f,v,data] = plyread('dennis.ply','tri');
+                vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
+                self.dennis = trisurf(f,v(:,1), v(:,2)-1.3, v(:,3)-0.7 ...
+                    ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
+            end
+            if decision == 1
+                delete(self.dennis);
+
+                [f,v,data] = plyread('dennis.ply','tri');
+                vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
+                self.dennis = trisurf(f,v(:,1), v(:,2)-0.8, v(:,3)-0.7 ...
+                    ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
+            end
         end
 
         function RemoveObstacle(self,~)
