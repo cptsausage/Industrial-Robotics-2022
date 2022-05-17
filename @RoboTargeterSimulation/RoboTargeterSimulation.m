@@ -27,7 +27,7 @@
             hold("on");
             
             % Load in the environment floors
-            surf([-1.25,-1.25;1.25,1.25],[-1,1;-1,1],[0.01,0.01;0.01,0.01], ...
+            surf([-0.5,-0.5;0.5,0.5],[-0.5,1.5;-0.5,1.5],[0.01,0.01;0.01,0.01], ...
                'CData',imread('wood.jpg'),'FaceColor','texturemap');
             surf([-2,-2;2,2],[-2,2;-2,2],[-0.75,-0.75;-0.75,-0.75], ...
                'CData',imread('marble.jpg'),'FaceColor','texturemap');
@@ -39,15 +39,15 @@
                'CData',imread('laser_warning.jpg'),'FaceColor','texturemap');
             
             % Load in the table model
-            [f,v,data] = plyread('new_table_3.ply','tri');
+            [f,v,data] = plyread('new_table_4.ply','tri');
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-            tableMesh_h = trisurf(f,v(:,1),v(:,2), v(:,3)-0.04 ...
+            tableMesh_h = trisurf(f,v(:,1),v(:,2)+0.5, v(:,3)-0.06 ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
             
             % Load in the safety features
             [f,v,data] = plyread('estop.ply','tri');
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-            tableMesh_h = trisurf(f,v(:,1), v(:,2)-0.8, v(:,3) ...
+            tableMesh_h = trisurf(f,v(:,1)-0.65, v(:,2)-0.35, v(:,3) ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
             [f,v,data] = plyread('dennis.ply','tri');
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
