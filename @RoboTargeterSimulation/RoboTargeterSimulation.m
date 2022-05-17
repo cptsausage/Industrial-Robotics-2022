@@ -73,9 +73,9 @@
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
             tableMesh_h = trisurf(f,v(:,1)-1.1, v(:,2)-0.75, v(:,3)-0.75 ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
-
-            self.laserBot = LaserBot();
             
+            self.laserBot = LaserBot();
+            hold on;
             self.targetBot = TargetBot();
         end
 
@@ -156,6 +156,41 @@
         function CalculateError(self)
             %CalculateError - Calculate error/accuracy between target and
             %laser (using line-plane intersection and target center)
+        end
+
+        function CreateObstacle(self)
+            % Change size and position here
+            figure(1);
+            hold on
+            size = 0.2;
+            x = -0.1;
+            y = 0.7;
+            z = 0.4;
+            % Obstacle corners
+            self.laserBot.obstaclePlots = ...
+                [-0.1 0.2 0;
+                -0.1 0.6 0;
+                -0.1 0.2 0.3;
+                -0.1 0.6 0.3;
+                0.3 0.2 0;
+                0.3 0.6 0;
+                0.3 0.2 0.3;
+                0.3 0.6 0.3];
+
+            % Spawn the obstacle model
+            [f,v,data] = plyread('obstacle.ply','tri');
+            vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
+            self.laserBot.obstacle = trisurf(f,v(:,1),v(:,2)+0.5, v(:,3) ...
+                ,'FaceVertexCData',vertexColours,'EdgeColor','none','EdgeLighting','flat');
+            hold off
+        end
+
+        function RemoveObstacle(self,~)
+            % Delete the ellipsoid
+            self.laserBot.obstaclePlots = [];
+
+            % Delete the model
+            delete(self.laserBot.obstacle);
         end
     end
 end

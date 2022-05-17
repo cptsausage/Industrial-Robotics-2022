@@ -16,6 +16,9 @@ classdef LaserBot < UR3
 
         hazardPlots; % Simulation-fed hazard location
         hazard;      % hazardous object
+
+        obstaclePlots;
+        obstacle;
         
         % Camera image
         cameraImage; % Property holding camera image 
