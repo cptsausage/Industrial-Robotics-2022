@@ -350,16 +350,19 @@ classdef UR3 < handle
 
         end
 
-        function JointSet(self)
+        function JointSet(self, ~, input)
             % JointSet - Function called during event where GUI joint values are updated
+            
+            % Get original joints
+            q0 = self.model.getpos();
 
-            % Set all joints from current values in GUI
-            q(1) = 0;
-            q(2) = 0;
-            q(3) = 0;
-            q(4) = 0;
-            q(5) = 0;
-            q(6) = 0;
+            % Set all joints from GUI input
+            q(1) = q0(1) + input(1)*(pi/180);
+            q(2) = q0(2) + input(2)*(pi/180);
+            q(3) = q0(3) + input(3)*(pi/180);
+            q(4) = q0(4) + input(4)*(pi/180);
+            q(5) = q0(5) + input(5)*(pi/180);
+            q(6) = q0(6) + input(6)*(pi/180);
 
             if self.CheckCollisions(q)
                 display('WARNING, COLLISION DETECTED FROM JOINT MANIPULATION.')
