@@ -46,10 +46,7 @@ classdef Workspace
             tableMesh_h = trisurf(f,v(:,1), v(:,2)-1.3, v(:,3)-0.7 ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
 
-            % Load in the robots
-            obj.laserBot = LaserBot();
             hold("on");
-            obj.targetBot = TargetBot();
             
 
         end
