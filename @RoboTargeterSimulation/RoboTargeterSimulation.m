@@ -24,7 +24,11 @@
             close all;
             set(0,'DefaultFigureWindowStyle','docked')
 
-            self.workspace = Workspace
+            self.laserBot = LaserBot();
+            
+            self.targetBot = TargetBot();
+
+            self.workspace = Workspace;
         end
 
         function InitialiseSimulation(self)
