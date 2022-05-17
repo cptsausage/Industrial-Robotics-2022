@@ -54,6 +54,24 @@
             tableMesh_h = trisurf(f,v(:,1), v(:,2)-1.3, v(:,3)-0.7 ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
 
+            % Load in the safety features (light poles)
+            [f,v,data] = plyread('light_pole.ply','tri');
+            vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
+            tableMesh_h = trisurf(f,v(:,1)+1.1, v(:,2)+1.7, v(:,3)-0.75 ...
+                ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
+            [f,v,data] = plyread('light_pole.ply','tri');
+            vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
+            tableMesh_h = trisurf(f,v(:,1)-1.1, v(:,2)+1.7, v(:,3)-0.75 ...
+                ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
+            [f,v,data] = plyread('light_pole.ply','tri');
+            vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
+            tableMesh_h = trisurf(f,v(:,1)+1.1, v(:,2)-0.75, v(:,3)-0.75 ...
+                ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
+            [f,v,data] = plyread('light_pole.ply','tri');
+            vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
+            tableMesh_h = trisurf(f,v(:,1)-1.1, v(:,2)-0.75, v(:,3)-0.75 ...
+                ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
+
             self.laserBot = LaserBot();
             
             self.targetBot = TargetBot();
