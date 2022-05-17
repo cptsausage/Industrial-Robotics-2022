@@ -119,8 +119,10 @@
 
         end
 
-        function hazard = CreateHazard(self)
+        function CreateHazard(self)
             % Change size and position here
+            figure(1);
+            hold on
             size = 0.2;
             x = -0.1;
             y = 0.7;
@@ -129,16 +131,16 @@
                 x-size/2, x+size/2, x+size/2, x-size/2, x-size/2;...
                 y, y, y, y, y;...
                 z+size/2, z+size/2, z-size/2, z-size/2, z+size/2];
-            hazard = surf(...
-                [x-size/2, x+size/2; x-size/2, x+size/2,],...
+            self.hazard = surf([x-size/2, x+size/2; x-size/2, x+size/2,],...
                 [y, y; y, y],...
                 [z+size/2, z+size/2; z-size/2, z-size/2],...
                 'CData',imread('hazardsign.jpg'),'FaceColor','texturemap');
+            hold off
         end
 
-        function RemoveHazard(self, hazard)
-            delete(self.laserBot.hazardPlots)
-            delete(hazard)
+        function RemoveHazard(self)
+            self.laserBot.hazardPlots = [];
+            delete(self.hazard);
         end
 
         function CalculateError(self)
