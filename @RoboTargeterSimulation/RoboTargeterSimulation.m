@@ -9,13 +9,12 @@
         laserBot;
         targetBot;
         laser;
-        hazard;
-        hazardPlots;
 
         % Simulated workspace size and parameters
         workspace;
         targetsHit = 0;
         time; % seconds
+        stop = 0; % Simulation stop
 
     end
 
@@ -24,20 +23,20 @@
             %RoboTargeterSimulation Initialisation of class object
             %   Creation of LaserBot and TargetBot objects
             close all;
-            set(0,'DefaultFigureWindowStyle','normal')
+            set(0,'DefaultFigureWindowStyle','docked')
 
             hold("on");
             
             % Load in the environment floors
-            wood = surf([-0.5,-0.5;0.5,0.5],[-0.5,1.5;-0.5,1.5],[0.01,0.01;0.01,0.01], ...
+            surf([-0.5,-0.5;0.5,0.5],[-0.5,1.5;-0.5,1.5],[0.01,0.01;0.01,0.01], ...
                'CData',imread('wood.jpg'),'FaceColor','texturemap');
-            marble = surf([-2,-2;2,2],[-2,2;-2,2],[-0.75,-0.75;-0.75,-0.75], ...
+            surf([-2,-2;2,2],[-2,2;-2,2],[-0.75,-0.75;-0.75,-0.75], ...
                'CData',imread('marble.jpg'),'FaceColor','texturemap');
 
             % Load in the environment walls
-            brickWall = surf([2,-2;2,-2],[-2,-2;-2,-2],[2,2;-0.75,-0.75], ...
+            surf([2,-2;2,-2],[-2,-2;-2,-2],[2,2;-0.75,-0.75], ...
                'CData',imread('brick-wall.jpg'),'FaceColor','texturemap');
-            laserSign = surf([1,-1;1,-1],[-1.9,-1.9;-1.9,-1.9],[1.75,1.75;0.75,0.75], ...
+            surf([1,-1;1,-1],[-1.9,-1.9;-1.9,-1.9],[1.75,1.75;0.75,0.75], ...
                'CData',imread('laser_warning.jpg'),'FaceColor','texturemap');
             
             % Load in the table model
@@ -49,35 +48,34 @@
             % Load in the safety features
             [f,v,data] = plyread('estop.ply','tri');
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-            estop_h = trisurf(f,v(:,1)-0.65, v(:,2)-0.35, v(:,3) ...
+            tableMesh_h = trisurf(f,v(:,1)-0.65, v(:,2)-0.35, v(:,3) ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
             [f,v,data] = plyread('dennis.ply','tri');
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-            dennis_h = trisurf(f,v(:,1), v(:,2)-1.3, v(:,3)-0.7 ...
+            tableMesh_h = trisurf(f,v(:,1), v(:,2)-1.3, v(:,3)-0.7 ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
 
             % Load in the safety features (light poles)
             [f,v,data] = plyread('light_pole.ply','tri');
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-            lightPole1_h = trisurf(f,v(:,1)+1.1, v(:,2)+1.7, v(:,3)-0.75 ...
+            tableMesh_h = trisurf(f,v(:,1)+1.1, v(:,2)+1.7, v(:,3)-0.75 ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
             [f,v,data] = plyread('light_pole.ply','tri');
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-            lightPole2_h = trisurf(f,v(:,1)-1.1, v(:,2)+1.7, v(:,3)-0.75 ...
+            tableMesh_h = trisurf(f,v(:,1)-1.1, v(:,2)+1.7, v(:,3)-0.75 ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
             [f,v,data] = plyread('light_pole.ply','tri');
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-            lightPole3_h = trisurf(f,v(:,1)+1.1, v(:,2)-0.75, v(:,3)-0.75 ...
+            tableMesh_h = trisurf(f,v(:,1)+1.1, v(:,2)-0.75, v(:,3)-0.75 ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
             [f,v,data] = plyread('light_pole.ply','tri');
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-            lightPole4_h = trisurf(f,v(:,1)-1.1, v(:,2)-0.75, v(:,3)-0.75 ...
+            tableMesh_h = trisurf(f,v(:,1)-1.1, v(:,2)-0.75, v(:,3)-0.75 ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
 
             self.laserBot = LaserBot();
-            hold('on');
+            
             self.targetBot = TargetBot();
-
         end
 
         function InitialiseSimulation(self)
@@ -139,13 +137,17 @@
                 [z+size/2, z+size/2; z-size/2, z-size/2],...
                 'CData',imread('hazardsign.jpg'),'FaceColor','texturemap');
             hold off
-            self.laserBot.hazardPlots = [];
-            self
         end
 
-        function RemoveHazard(self)
-            self
-            delete(self.hazard)
+        function RemoveHazard(self,~)
+            self.laserBot.hazardPlots = [];
+            delete(self.hazard);
+        end
+
+        function STOP(self)
+            while self.stop == 1
+                pause(1);
+            end
         end
 
         function CalculateError(self)
