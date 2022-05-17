@@ -9,6 +9,7 @@
         laserBot;
         targetBot;
         laser;
+        hazard;
 
         % Simulated workspace size and parameters
         workspace;
