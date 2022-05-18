@@ -10,6 +10,7 @@
         targetBot;
         laser;
         hazard;
+        gg;
 
         % Simulated workspace size and parameters
         workspace;
@@ -49,25 +50,31 @@
             % Load in the safety features
             [f,v,data] = plyread('estop.ply','tri');
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-            tableMesh_h = trisurf(f,v(:,1)-0.65, v(:,2)-0.35, v(:,3) ...
+            estop_h = trisurf(f,v(:,1)-0.65, v(:,2)-0.35, v(:,3) ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
 
             % Load in the safety features (light poles)
             [f,v,data] = plyread('light_pole.ply','tri');
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-            tableMesh_h = trisurf(f,v(:,1)+1.1, v(:,2)+1.7, v(:,3)-0.75 ...
+            lightPole1_h = trisurf(f,v(:,1)+1.1, v(:,2)+1.7, v(:,3)-0.75 ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
             [f,v,data] = plyread('light_pole.ply','tri');
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-            tableMesh_h = trisurf(f,v(:,1)-1.1, v(:,2)+1.7, v(:,3)-0.75 ...
+            lightPole2_h = trisurf(f,v(:,1)-1.1, v(:,2)+1.7, v(:,3)-0.75 ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
             [f,v,data] = plyread('light_pole.ply','tri');
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-            tableMesh_h = trisurf(f,v(:,1)+1.1, v(:,2)-0.75, v(:,3)-0.75 ...
+            lightPole3_h = trisurf(f,v(:,1)+1.1, v(:,2)-0.75, v(:,3)-0.75 ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
             [f,v,data] = plyread('light_pole.ply','tri');
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-            tableMesh_h = trisurf(f,v(:,1)-1.1, v(:,2)-0.75, v(:,3)-0.75 ...
+            lightPole4_h = trisurf(f,v(:,1)-1.1, v(:,2)-0.75, v(:,3)-0.75 ...
+                ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
+
+            self.gg = gourgeousGavin()
+            [f,v,data] = plyread('dennis.ply','tri');
+            vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
+            self.gg.gavinModel = trisurf(f,v(:,1), v(:,2)-1.3, v(:,3)-0.7 ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
             
             self.laserBot = LaserBot();
@@ -171,21 +178,29 @@
             hold off
         end
 
-        function MoveDennis(self)
-            decision = round(rand());
-            if decision == 0
-                delete
+        function MoveDennis(self,~)
+            self.gg.gavinModel
+            hold on
+            
+            clear(self.gg.gavinModel)
+            
+            self.gg = gourgeousGavin()
+
+            decision = round(rand())
+%             if decision == 0
+%                 [f,v,data] = plyread('dennis.ply','tri');
+%                 vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
+%                 self.gg.gavinModel = trisurf(f,v(:,1), v(:,2)-1.3, v(:,3)-0.7 ...
+%                     ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
+%             end
+            if decision == 1
                 [f,v,data] = plyread('dennis.ply','tri');
                 vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-                dennis_h = trisurf(f,v(:,1), v(:,2)-1.3, v(:,3)-0.7 ...
+                self.gg.gavinModel = trisurf(f,v(:,1), v(:,2)-0.8, v(:,3)-0.7 ...
                     ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
             end
-            if decision == 0
-                [f,v,data] = plyread('dennis.ply','tri');
-                vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-                tableMesh_h = trisurf(f,v(:,1), v(:,2)-1.3, v(:,3)-0.7 ...
-                    ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
-            end
+            
+            hold off
         end
 
         function RemoveObstacle(self,~)
