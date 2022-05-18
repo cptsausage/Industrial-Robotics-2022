@@ -12,12 +12,16 @@ classdef UR3 < handle
 
         % Designated UR3 workspace for initial plot
         workspace = [-2 2 -2 2 -0.8 2];
+%         workspace = [0 0 0 0 0 0];
 
         % Default starting position for UR3
         defaultPosition = deg2rad([0,-45,-90,-45,0,0]);
 
         % Nice starting pose before performing RMRC in cartesian plane
         startT = transl(0.4,0,0.5)*troty(pi/2);
+
+        %Ellipses for collision plot on
+        ellipsesOn = 0;
 
         % Camera Parameters
         cameraOn = false;
@@ -42,6 +46,18 @@ classdef UR3 < handle
         % Boolean to run analysis of RMRC
         analysis = false;
 
+        cubePoints;
+        oneSideOfCube_h;
+        sizeMat;
+        cubePointsAndOnes;
+        cube_h;
+        tr;
+        tablePointsAndOnes;
+        tablepoints;
+        updatedtablePointsAndOnes;
+        x = 0;
+        y = -1.3;
+        z = 0.5
     end
 
     methods
@@ -49,9 +65,9 @@ classdef UR3 < handle
             % UR3 - Main constructor initialising UR3 object
             
             self.GetUR3Robot();         % Create UR3 SerialLink model
-            
+            self.PlotCube();
             self.PlotUR3();             % Plot UR3 in workspace with model mesh
-
+            %%self.model.animate(deg2rad([0,10,10,10,10,10]))
             drawnow
 
         end
@@ -88,16 +104,21 @@ classdef UR3 < handle
 
         function PlotUR3(self)
             % PlotUR3 - Plots the UR3 robot with model
-
+            self.InitialiseEllipsoids()
             for linkIndex = 0:self.model.n
                 
                 [ faceData, vertexData, plyData{linkIndex+1} ] = plyread(['UR3Link',num2str(linkIndex),'.ply'],'tri'); %#ok<AGROW>
                 self.model.faces{linkIndex+1} = faceData;
                 self.model.points{linkIndex+1} = vertexData;
             end
-        
-            % Display robot
             self.model.plot3d(zeros(1,self.model.n),'noarrow','workspace',self.workspace);
+            hold on
+            self.InitialiseEllipsoids();
+            hold on
+            self.model.plot3d(zeros(1,self.model.n),'noarrow','workspace',self.workspace);
+
+            % Display robot
+            %self.model.plot3d(zeros(1,self.model.n),'noarrow','workspace',self.workspace);
             if isempty(findobj(get(gca,'Children'),'Type','Light'))
                 camlight
             end  
@@ -482,7 +503,8 @@ classdef UR3 < handle
             % positions q, constructs ellipsoid points centered around the joint
             % midpoints and checks intersections between ellipsoids and the
             % floor/table
-            CollisionDetected = 0;          % 
+            CollisionDetected = self.CheckCollisionsWithCube(q);          % 
+            %%self.CheckCollisionsWithCube(q)
             
             return
         end
@@ -509,7 +531,177 @@ classdef UR3 < handle
                 pause(0.01);
             end
         end
+        function InitialiseEllipsoids(self)
+             
+                    L1 = [0.1519  0           -pi/2   0]
+                    L2 = [0      0.120   0.24365     0      ]
+                    L3 = [0      -0.093  0.21325     0      ]
+                    L4 = [0      0.11235 0           -pi/2  ]
+                    L5 = [0      0.08535 0           pi/2    ]
+                    L6 = [0      0.0819  0           0	    ]
+                
+                     Lall = [L1; L2; L3; L4; L5; L6]
 
 
+                centerPoint = zeros(3,6);
+%                 centerPoint(:,1) = [0.0,0.0, 0.0];
+%                 centerPoint(:,1) = [0.0,0.0, 0.0];
+%                 centerPoint(:,1) = [0.0,0.0, 0.0];
+%                 centerPoint(:,4) = [0.0,0.0, 0.0];
+%                 centerPoint(:,5) = [0.0,0.0, 0.0];
+%                 centerPoint(:,6) = [0.0,0.0, 0.0];
+
+                  centerPoint(:,1) = [0,0,0];
+                  centerPoint(:,2) = [0,-Lall(2,2)/2,Lall(2,1)];
+                  centerPoint(:,3) = [Lall(3,2)/2,0,Lall(3,1)];
+                  centerPoint(:,4) = [Lall(4,2),0,Lall(4,1)/2];
+                  centerPoint(:,5) = [Lall(5,2),0,Lall(5,1)/2];
+                  centerPoint(:,6) = [0,0,1/4*Lall(5,1)];
+
+                  centerPoint(:,1) = [0.0,0.0, 0.0];
+                  centerPoint(:,2) = [0.0,0.0,Lall(2,2)/2];
+                  centerPoint(:,3) = [Lall(3,2)*1.1,Lall(3,1), 0.0];
+                  centerPoint(:,4) = [-Lall(4,2)*1.1,Lall(4,1)/2, 0.0];
+                  centerPoint(:,5) = [0.0,Lall(4,2)/2, 0.0];
+                  centerPoint(:,6) = [0.0,0.0, Lall(4,2)/2];
+
+                radiis = zeros(3,6);
+                radiis(:,1) = [0.1,0.1, 0.1];
+                radiis(:,2) = [0.1,0.1, 0.2];
+                radiis(:,3) = [0.25,0.1, 0.1];
+                radiis(:,4) = [0.25,0.1, 0.1];
+                radiis(:,5) = [0.1,0.1, 0.1];
+                radiis(:,6) = [0.05,0.05, 0.15];
+
+                X = zeros(21,21,6);
+                Y = zeros(21,21,6);
+                Z = zeros(21,21,6);
+
+                for i = 2:6
+                    [X(:,:,i), Y(:,:,i),Z(:,:,i)] = ellipsoid(centerPoint(1,i), centerPoint(2,i), centerPoint(3,i), radiis(1,i),radiis(2,i),radiis(3,i));
+                    XTemp = X(:,:,i);
+                    YTemp = Y(:,:,i);
+                    ZTemp = Z(:,:,i);
+                    
+                    if self.ellipsesOn
+                        self.model.points{i} = [XTemp(:),YTemp(:),ZTemp(:)];
+                        warning off
+    
+                        self.model.faces{i} = delaunay(self.model.points{i});    
+                        warning on;
+                    end
+                    hold on
+                end
+        end
+        function PlotCube(self)
+                        
+                        self.tablepoints = zeros(16010,3);
+                        count = 0;
+                        for b = 1:200
+                          
+                            for c = 1:160
+                                count = count +1;
+                                self.tablepoints(count,:) =[(-0.8+0.01*c),(-0.5+0.01*b),0];
+                                
+                            end
+                        end
+                %tr = self.model.fkine(q);
+                [Y,Z] = meshgrid(-0.25:0.05:0.25,-0.25:0.05:0.25);
+                self.sizeMat = size(Y);
+                X = repmat(0.25,self.sizeMat(1),self.sizeMat(2));
+                %self.oneSideOfCube_h = surf(X,Y,Z);
+                
+            self.cubePoints = self.oneSideOfCube_h    
+            % Combine one surface as a point cloud
+            self.cubePoints = [X(:),Y(:),Z(:)];
+
+
+
+                self.cubePoints = [ self.cubePoints ...
+             ; self.cubePoints * rotz(pi/2)...
+             ; self.cubePoints * rotz(pi) ...
+             ; self.cubePoints * rotz(3*pi/2) ...
+             ; self.cubePoints * roty(pi/2) ...
+             ; self.cubePoints * roty(-pi/2)];    
+
+                %cubeAtOigin_h = plot3(cubePoints(:,1),cubePoints(:,2),cubePoints(:,3),'r.');
+                self.cubePoints = self.cubePoints + repmat([0,0.0,0.0],size(self.cubePoints,1),1);
+                %self.cube_h = plot3(self.cubePoints(:,1),self.cubePoints(:,2),self.cubePoints(:,3),'b.');
+                axis equal
+
+        end
+
+        function LightCurtainResult = GetDenisEllipsoid(self)
+                [Y,Z] = meshgrid(-0.25:0.05:0.25,-0.25:0.05:0.25);
+                self.sizeMat = size(Y);
+                X = repmat(0.25,self.sizeMat(1),self.sizeMat(2));
+                self.oneSideOfCube_h = surf(X,Y,Z);
+            return
+        end
+
+        function hit = CheckCollisionsWithCube(self,q)
+                hold on
+                self.tr = self.model.fkine(q);
+                Linky  = self.model.links;
+                % Combine one surface as a point cloud
+                
+                
+                centerPoint = zeros(3,6);
+                %centerPoint(:,1) = [0.1,0.1, 0.1];
+                %centerPoint(:,2) = [0.1,0.1, 0.1];
+                %centerPoint(:,3) = [0.1,0.1, 0.1];
+                %centerPoint(:,4) = [0.1,0.1, 0.1];
+                %centerPoint(:,5) = [0.1,0.1, 0.1];
+                %centerPoint(:,6) = [0.1,0.1, 0.1];
+                radiis = zeros(3,6);
+                radiis(:,1) = [0.1,0.1, 0.1];
+                radiis(:,2) = [0.1,0.1, 0.1];
+                radiis(:,3) = [0.1,0.1, 0.1];
+                radiis(:,4) = [0.1,0.1, 0.1];
+                radiis(:,5) = [0.1,0.1, 0.1];
+                radiis(:,6) = [0.1,0.1, 0.1];
+                
+                X = zeros(21,21,6);
+                Y = zeros(21,21,6);
+                Z = zeros(21,21,6);
+                
+                self.tr = zeros(4,4,self.model.n+1);
+                self.tr(:,:,1) = self.model.base;
+                for i = 1 : self.model.n
+                    self.tr(:,:,i+1) = self.tr(:,:,i) * trotz(q(i)) * transl(0,0,Linky(i).d) * transl(Linky(i).a,0,0) * trotx(Linky(i).alpha);
+                end
+                
+% 
+                for i = 1:self.model.n
+                        
+                        self.cubePointsAndOnes = [inv(self.tr(:,:,i)) * [self.cubePoints,ones(size(self.cubePoints,1),1)]']';
+                        updatedCubePoints = self.cubePointsAndOnes(:,1:3);
+                        algebraicDist = self.GetAlgebraicDist(updatedCubePoints, centerPoint(:,i), radiis(:,i));
+                        pointsInside = find(algebraicDist < 1);
+                        %display(['2.10: There are ', num2str(size(pointsInside,1)),' points inside the ',num2str(i),'th ellipsoid']);
+                        
+                end
+                hitvalue = 0;
+                for i = 2:self.model.n - 1
+                        self.tablePointsAndOnes = [inv(self.tr(:,:,i)) * [self.tablepoints,ones(size(self.tablepoints,1),1)]']';
+                        self.updatedtablePointsAndOnes = self.tablePointsAndOnes(:,1:3);
+                        algebraicDist = self.GetAlgebraicDist(self.updatedtablePointsAndOnes, centerPoint(:,i), radiis(:,i));
+                        pointsInside = find(algebraicDist < 1);
+                        display(['2.10: There are ', num2str(size(pointsInside,1)),' points inside the ',num2str(i),'th ellipsoid']);
+                        if num2str(size(pointsInside,1)) ~= '0'
+                            hitvalue = 1;
+                        end
+                end
+               
+                hit = hitvalue;
+                return
+        end
+
+        function algebraicDist = GetAlgebraicDist(self,points, centerPoint, radii)
+
+                algebraicDist = ((points(:,1)-centerPoint(1))/radii(1)).^2 ...
+              + ((points(:,2)-centerPoint(2))/radii(2)).^2 ...
+              + ((points(:,3)-centerPoint(3))/radii(3)).^2;
+        end
     end
 end
