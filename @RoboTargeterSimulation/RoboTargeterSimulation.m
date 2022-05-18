@@ -148,11 +148,6 @@
             end
         end
 
-        function CalculateError(self)
-            %CalculateError - Calculate error/accuracy between target and
-            %laser (using line-plane intersection and target center)
-        end
-
         function CreateObstacle(self)
             % Change size and position here
             figure(1);
