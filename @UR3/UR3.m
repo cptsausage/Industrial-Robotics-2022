@@ -531,6 +531,7 @@ classdef UR3 < handle
                 pause(0.01);
             end
         end
+        
         function InitialiseEllipsoids(self)
              
                     L1 = [0.1519  0           -pi/2   0]
@@ -593,6 +594,7 @@ classdef UR3 < handle
                     hold on
                 end
         end
+        
         function PlotCube(self)
                         
                         self.tablepoints = zeros(16010,3);
@@ -687,7 +689,7 @@ classdef UR3 < handle
                         self.updatedtablePointsAndOnes = self.tablePointsAndOnes(:,1:3);
                         algebraicDist = self.GetAlgebraicDist(self.updatedtablePointsAndOnes, centerPoint(:,i), radiis(:,i));
                         pointsInside = find(algebraicDist < 1);
-                        display(['2.10: There are ', num2str(size(pointsInside,1)),' points inside the ',num2str(i),'th ellipsoid']);
+%                         display(['2.10: There are ', num2str(size(pointsInside,1)),' points inside the ',num2str(i),'th ellipsoid']);
                         if num2str(size(pointsInside,1)) ~= '0'
                             hitvalue = 1;
                         end

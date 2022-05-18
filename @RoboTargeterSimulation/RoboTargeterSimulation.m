@@ -21,6 +21,7 @@
     end
 
     methods
+        
         function self = RoboTargeterSimulation(~)
             %RoboTargeterSimulation Initialisation of class object
             %   Creation of LaserBot and TargetBot objects
@@ -48,6 +49,10 @@
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
             
             % Load in the safety features
+            [f,v,data] = plyread('dennis.ply','tri');
+            vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
+            dennis_h = trisurf(f,v(:,1), v(:,2)-1.3, v(:,3)-0.7 ...
+                ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
             [f,v,data] = plyread('estop.ply','tri');
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
             estop_h = trisurf(f,v(:,1)-0.65, v(:,2)-0.35, v(:,3) ...
@@ -195,5 +200,6 @@
             % Delete the model
             delete(self.laserBot.obstacle);
         end
+    
     end
 end

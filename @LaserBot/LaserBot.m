@@ -34,6 +34,7 @@ classdef LaserBot < UR3
     end
 
     methods
+        
         function self = LaserBot()
             %LaserBot - LaserBot constructor, inheriting from UR3 baseclass
             %   Constructor calls base class
@@ -287,7 +288,7 @@ classdef LaserBot < UR3
                             return
                         end
 
-                        if self.CheckCollisions
+                        if self.CheckCollisions(nq)
                             display('LASERBOT: Collision detected within next step, stopping...')
                             return
                         end
@@ -330,7 +331,7 @@ classdef LaserBot < UR3
                             return
                         end
 
-                        if self.CheckCollisions
+                        if self.CheckCollisions(nq)
                             display('LASERBOT: Collision detected within next step, stopping...')
                             return
                         end

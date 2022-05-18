@@ -23,6 +23,7 @@ classdef TargetBot < UR3
     end
 
     methods
+        
         function self = TargetBot()
             %TargetBot - TargetBot constructor, inheriting from UR3 baseclass
             %   Constructor calls base class
@@ -80,6 +81,7 @@ classdef TargetBot < UR3
             q = self.model.ikcon(transl(x,y,z)*trotx(pi/2), self.model.getpos());
             self.MoveJoints(q);
         end
+    
     end
 
 end
