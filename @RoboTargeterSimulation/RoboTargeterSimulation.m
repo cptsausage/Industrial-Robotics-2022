@@ -10,7 +10,7 @@
         targetBot;
         laser;
         hazard;
-        dennis;
+        gg;
 
         % Simulated workspace size and parameters
         workspace;
@@ -74,6 +74,12 @@
             [f,v,data] = plyread('light_pole.ply','tri');
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
             lightPole4_h = trisurf(f,v(:,1)-1.1, v(:,2)-0.75, v(:,3)-0.75 ...
+                ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
+
+            self.gg = gourgeousGavin()
+            [f,v,data] = plyread('dennis.ply','tri');
+            vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
+            self.gg.gavinModel = trisurf(f,v(:,1), v(:,2)-1.3, v(:,3)-0.7 ...
                 ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
             
             self.laserBot = LaserBot();
@@ -172,25 +178,30 @@
             hold off
         end
 
-        function MoveDennis(self)
-            decision = round(rand());
+        function MoveDennis(self,~)
+            self.gg.gavinModel
+            hold on
+            
+            delete(self.gg.gavinModel)
+            
+            isvalid(self.gg.gavinModel)
+            isgraphics(self.gg.gavinModel)
 
-            if decision == 0
-                delete(self.dennis);
-
-                [f,v,data] = plyread('dennis.ply','tri');
-                vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-                self.dennis = trisurf(f,v(:,1), v(:,2)-1.3, v(:,3)-0.7 ...
-                    ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
-            end
+            decision = round(rand())
+%             if decision == 0
+%                 [f,v,data] = plyread('dennis.ply','tri');
+%                 vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
+%                 self.gg.gavinModel = trisurf(f,v(:,1), v(:,2)-1.3, v(:,3)-0.7 ...
+%                     ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
+%             end
             if decision == 1
-                delete(self.dennis);
-
                 [f,v,data] = plyread('dennis.ply','tri');
                 vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
-                self.dennis = trisurf(f,v(:,1), v(:,2)-0.8, v(:,3)-0.7 ...
+                self.gg.gavinModel = trisurf(f,v(:,1), v(:,2)-0.8, v(:,3)-0.7 ...
                     ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
             end
+            self.gg.gavinModel
+            hold off
         end
 
         function RemoveObstacle(self,~)
