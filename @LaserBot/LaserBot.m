@@ -26,7 +26,7 @@ classdef LaserBot < UR3
         % Desired positions of target corners in camera plane based on
         % real target size
         targetSize = 0.18 % 18x18 cm
-        targetDepth = 0.8; % Approximate distance between the target/laser
+        targetDepth = 0.7; % Approximate distance between the target/laser
         cameraTargets;
         laserObject;
         % Target data
@@ -204,7 +204,7 @@ classdef LaserBot < UR3
                             return
                         end
 
-                        if self.CheckCollisions
+                        if self.CheckCollisions(nq)
                             display('LASERBOT: Collision detected within next step, stopping...')
                             return
                         end
